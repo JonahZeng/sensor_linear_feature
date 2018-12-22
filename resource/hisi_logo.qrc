@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>hisi_logo.PNG</file>
+        <file>about.PNG</file>
+        <file>openraw.PNG</file>
+    </qresource>
+</RCC>
