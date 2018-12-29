@@ -36,7 +36,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     ui->dockWidgetContents->setLayout(ui->gridLayout);
-    ui->statusBar->setStyleSheet("color: blue; background-color: yellow");
+    ui->statusBar->setStyleSheet("color: yellow; background-color: rgb(0, 102, 190)");
     ui->scrollArea->setBackgroundRole(QPalette::Dark);
     setCentralWidget(ui->scrollArea);
 
@@ -523,8 +523,10 @@ void MainWindow::on_action_Open_BLC_raw_triggered()
             else
                 blc_fn_map.insert(iso, QStringList(*it));
         }
-        if(blc_fn_map.size()<=0)
+        if(blc_fn_map.size()>10 || blc_fn_map.size()<=0){
+            QMessageBox::information(this, tr("error"), tr("ISO种类必须在1-10范围内，请选择(含)10种ISO以内的raw文件"), QMessageBox::Ok);
             return;
+        }
         BLCDialog blc_dlg(this, blc_fn_map, bm, rawsz, bd); // iso-fn map/ bayer / raw size/ bitdepth
         blc_dlg.exec();
     }
