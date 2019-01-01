@@ -34,7 +34,9 @@ SOURCES += \
     chartview.cpp \
     rightshiftdialog.cpp \
     chart.cpp \
-    blcdialog.cpp
+    blcdialog.cpp \
+    calcblcthread.cpp \
+    calcblcprogressdlg.cpp
 
 HEADERS += \
         inc/mainwindow.h \
@@ -46,29 +48,32 @@ HEADERS += \
     inc/chartview.h \
     inc/rightshiftdialog.h \
     inc/chart.h \
-    inc/blcdialog.h
+    inc/blcdialog.h \
+    inc/calcblcthread.h \
+    inc/calcblcprogressdlg.h
 
 FORMS += \
         ui\mainwindow.ui \
     ui\aboutdialog.ui \
     ui\rawinfodialog.ui \
-    ui\rightshiftdialog.ui
+    ui\rightshiftdialog.ui \
+    ui\calcblcprogressdlg.ui
 
-INCLUDEPATH += E:\yqzeng\opencv3\build_x64\include \
-        C:\python3\include \
-        C:\python3\Lib\site-packages\numpy\core\include
+#INCLUDEPATH += E:\yqzeng\opencv3\build_x64\include \
+#        C:\python3\include \
+#        C:\python3\Lib\site-packages\numpy\core\include
 
-LIBS += E:\yqzeng\opencv3\build_x64\x64\vc15\lib\opencv_core341d.lib \
-        E:\yqzeng\opencv3\build_x64\x64\vc15\lib\opencv_imgproc341d.lib \
-        C:\python3\libs\python35.lib
+#LIBS += E:\yqzeng\opencv3\build_x64\x64\vc15\lib\opencv_core341d.lib \
+#        E:\yqzeng\opencv3\build_x64\x64\vc15\lib\opencv_imgproc341d.lib \
+#        C:\python3\libs\python35.lib
 
-#INCLUDEPATH += D:\opencv3-4-1\build\include \
-#        C:\python36\include \
-#        C:\python36\Lib\site-packages\numpy\core\include
-#
-#LIBS += C:\python36\libs\python36.lib \
-#        D:\opencv3-4-1\build\x64\vc14\lib\opencv_core343.lib \
-#        D:\opencv3-4-1\build\x64\vc14\lib\opencv_imgproc343.lib
+INCLUDEPATH += D:\opencv3-4-1\build\include \
+        C:\python36\include \
+        C:\python36\Lib\site-packages\numpy\core\include
+
+LIBS += C:\python36\libs\python36.lib \
+        D:\opencv3-4-1\build\x64\vc14\lib\opencv_core343.lib \
+        D:\opencv3-4-1\build\x64\vc14\lib\opencv_imgproc343.lib
 
 
 
