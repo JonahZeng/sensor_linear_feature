@@ -22,12 +22,10 @@ CalcBlcProgressDlg::~CalcBlcProgressDlg()
 void CalcBlcProgressDlg::handleCurrentTaskId(quint16 taskId)
 {
     if(isVisible()){
+        ui->progressBar->setValue(taskId);//进度条设置
         qint32 maxTaskID = ui->progressBar->maximum();//如果任务数量完成，关闭对话框
         if(taskId==maxTaskID){
             accept();
-        }
-        if(taskId<maxTaskID){
-            ui->progressBar->setValue(taskId);//进度条设置
         }
     }
 }
