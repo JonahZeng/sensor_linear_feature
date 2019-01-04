@@ -1,9 +1,8 @@
-﻿#include "inc/calcblcthread.h"
+#include "inc/calcblcthread.h"
 #include "numpy/arrayobject.h"
 #include <QFile>
-#include <QMessageBox>
 
-calcBlcThread::calcBlcThread(QObject *parent, QMap<qint32, QStringList>& iso_fn, rawinfoDialog::bayerMode bm, QSize rawsz, quint16 bd, QDomDocument* doc, QDomElement& root)
+calcBlcThread::calcBlcThread(QObject *parent, QMap<qint32, QStringList>& iso_fn, rawinfoDialog::bayerMode bm, QSize rawsz, quint16 bd, QDomDocument* doc, QDomElement& root, quint16 ts)
     : QThread(parent),
      blc_fn_map(iso_fn),
      bayerMode(bm),
@@ -11,18 +10,23 @@ calcBlcThread::calcBlcThread(QObject *parent, QMap<qint32, QStringList>& iso_fn,
      rawSize(rawsz),
      taskID(0),
      xmlDoc(doc),
-     docRoot(root)
+     docRoot(root),
+     maxTask(ts)
 {
-
+    if(_import_array()< 0){ //WIN7+VS2017+PYTHON3.5.4 测试可以
+        emit pyInitFail();
+    }
 }
+
 
 void calcBlcThread::run()
 {
     //-----一次性计算过程，如果多次，import 模块内容应放在构造函数里面，并保持PyObject*指针，并在析构函数中Py_DECREF
-    if(_import_array() < 0){
-        emit pyInitFail();
-        return;
-    }
+    //if(_import_array()< 0){//WIN10+VS2015+PYTHON3.6.6 测试可以
+    //    emit pyInitFail();
+    //    return;
+    //}
+#define BLC_TOTAL_DATA 10
 
     PyObject* pNdimageModule = PyImport_Import(PyUnicode_FromString("scipy.ndimage"));
     PyObject* pUniformFunc = PyObject_GetAttrString(pNdimageModule, "uniform_filter");
@@ -39,11 +43,7 @@ void calcBlcThread::run()
         return;
     }
     //----------------------end----------------------------
-    //int numTasks = 0;
-    //for(QMap<qint32, QStringList>::iterator it=blc_fn_map.begin(); it!=blc_fn_map.end(); it++){
-    //    QStringList files = it.value();
-    //    numTasks += files.size();
-    //}
+
 
     qreal* bayer_r_buf = new qreal[rawSize.width()*rawSize.height()/4];
     qreal* bayer_gr_buf = new qreal[rawSize.width()*rawSize.height()/4];
@@ -63,10 +63,11 @@ void calcBlcThread::run()
     npy_intp shape[2] = {rawSize.height()/2, rawSize.width()/2};
     int i = 0, dataIdx=0;
     QVector<quint16> stored_ae_gain;
+    quint16 ae_gain;
+    quint16 r_blc_be, gr_blc_be, gb_blc_be, b_blc_be;
+    QVector<quint16> r_grid(121), gr_grid(121), gb_grid(121), b_grid(121);
     for(QMap<qint32, QStringList>::iterator it=blc_fn_map.begin(); it!=blc_fn_map.end(); it++){
-        quint16 r_blc_be, gr_blc_be, gb_blc_be, b_blc_be;
-        QVector<quint16> r_grid(121), gr_grid(121), gb_grid(121), b_grid(121);
-        quint16 ae_gain = it.key()/50;
+        ae_gain = it.key()/50;
         for(QStringList::Iterator str=it.value().begin(); str!=it.value().end(); str++){
             QFile raw_f(*str);
             raw_f.open(QFile::ReadOnly);
@@ -75,7 +76,8 @@ void calcBlcThread::run()
             addRaw2FourChannel(raw_buf, bayer_r_buf, bayer_gr_buf, bayer_gb_buf, bayer_b_buf);
             memset((void*)raw_buf, 0, bitDepth>8?(2*rawSize.width()*rawSize.height()):rawSize.width()*rawSize.height());
             i++;
-            emit currentTaskId(i);
+            if(i<maxTask)
+                emit currentTaskId(i);
         }
         avgBayerChannel(bayer_r_buf, it.value().size());
         avgBayerChannel(bayer_gr_buf, it.value().size());
@@ -136,8 +138,9 @@ void calcBlcThread::run()
         calGridValue((qreal*)(savgol_gb_order0->data), savgol_gb_order0->dimensions[0], savgol_gb_order0->dimensions[1], gb_grid);
         calGridValue((qreal*)(savgol_b_order0->data), savgol_b_order0->dimensions[0], savgol_b_order0->dimensions[1], b_grid);
 
-        if(!stored_ae_gain.contains(ae_gain)){
+        if(!stored_ae_gain.contains(ae_gain) && dataIdx<BLC_TOTAL_DATA){
             createBlcDateNode(dataIdx, ae_gain, r_blc_be, gr_blc_be, gb_blc_be, b_blc_be, r_grid, gr_grid, gb_grid, b_grid);
+            stored_ae_gain.append(ae_gain);
             dataIdx++;
         }
 
@@ -155,6 +158,7 @@ void calcBlcThread::run()
         memset((void*)bayer_gb_buf, 0, sizeof(qreal)*rawSize.width()*rawSize.height()/4);
         memset((void*)bayer_b_buf, 0, sizeof(qreal)*rawSize.width()*rawSize.height()/4);
     }
+
     Py_XDECREF(pSignalModule);
     Py_XDECREF(pZoomFunc);
     Py_XDECREF(pUniformFunc);
@@ -165,7 +169,14 @@ void calcBlcThread::run()
     delete[] bayer_gb_buf;
     delete[] bayer_gr_buf;
     delete[] bayer_r_buf;
-    //return 0;
+
+    if(dataIdx<BLC_TOTAL_DATA){
+        ae_gain=ae_gain+20;
+        for(int k=dataIdx; k<BLC_TOTAL_DATA; k++, ae_gain+=20){
+            createBlcDateNode(k, ae_gain, r_blc_be, gr_blc_be, gb_blc_be, b_blc_be, r_grid, gr_grid, gb_grid, b_grid);
+        }
+    }
+    emit currentTaskId(maxTask);
 }
 
 void calcBlcThread::addRaw2FourChannel(quint8 *raw_buf, qreal *r_ch, qreal *gr_ch, qreal *gb_ch, qreal *b_ch)
@@ -233,7 +244,7 @@ quint16 calcBlcThread::avgBlcValueBE(qreal *savgol_result, qint64 len)
     for(qint64 idx=0; idx<len; idx++){
         sum += savgol_result[idx];
     }
-    Q_ASSERT(sum>0);
+    Q_ASSERT(sum>0 && len>0);
     return quint16((sum/len)+0.5);
 }
 
@@ -263,7 +274,6 @@ void calcBlcThread::createBlcDateNode(quint8 order,
 {
     Q_ASSERT(R_grid_val.size()==121 && Gr_grid_val.size()==121 && Gb_grid_val.size()==121 && B_grid_val.size()==121);
     if(!(xmlDoc->isNull()) && !(docRoot.isNull())){
-        //QMessageBox::warning(this, tr("doc"), tr("start create doc"), QMessageBox::Ok);
         QDomElement data = xmlDoc->createElement("data"+QString::number(order, 10));
 
         QDomElement ae_gain = xmlDoc->createElement("ae_gain");
