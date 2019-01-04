@@ -12,6 +12,7 @@
 #include <QMap>
 #include <QPlainTextEdit>
 #include "inc/rawinfodialog.h"
+#include "inc/blcxmlhighlight.h"
 #include <qdom.h>
 
 class gridImgLabel : public QLabel
@@ -45,7 +46,10 @@ protected slots:
     void onNoGridToggled(bool statu);
     void onGrid5_5_Toggled(bool statu);
     void onGrid11_11_Toggled(bool statu);
-    void onDestoryDlg();
+    void onThreadDestroyed(QObject* obj=nullptr);
+    void onSaveXmlButton();
+    void onSaveAsButton();
+    void onContextChanged();
 
 
 private:
@@ -55,7 +59,11 @@ private:
     QGroupBox* grid_box;
     QRadioButton *noGrid, *grid5_5, *grid11_11;
     QPlainTextEdit* blcDataEdit;
+    bool blcDataChanged;
+    QString xmlFn;
+    QString preWorkPath;
     QPushButton* saveXml;
+    QPushButton* saveAsXml;
     QDomDocument* xmlDoc;
     QDomElement docRoot;
     QHBoxLayout* hlayout;
@@ -67,6 +75,8 @@ private:
     QPixmap showIm;
     CalcBlcProgressDlg* clacBLCprogress;
     calcBlcThread* calcBLCthread;
+    BlcXmlHighlight* xmlHL;
+
 
 private:
     void showRawFile(const QString& rawfile);
