@@ -1,8 +1,8 @@
-﻿#if _MSC_VER > 1600
+#if _MSC_VER > 1600
 #pragma execution_character_set("utf-8")  //fuck MSVC complior, use UTF-8, not gb2312/gbk
 #endif
 
-#define USE_OPENCV_DEMOSAIC
+//#define USE_OPENCV_DEMOSAIC
 
 #include "inc/mainwindow.h"
 #include "ui_mainwindow.h"
