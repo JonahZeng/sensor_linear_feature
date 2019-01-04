@@ -1,28 +1,30 @@
-﻿#if _MSC_VER > 1600
+#if _MSC_VER > 1600
 #pragma execution_character_set("utf-8")  //fuck MSVC complior, use UTF-8, not gb2312/gbk
 #endif
 
-#include "inc/blcdialog.h"
 #include <QVBoxLayout>
 #include <QFileInfo>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QTextStream>
 #include <QMessageBox>
-//#include "numpy/arrayobject.h"
+#include <QFileDialog>
+#include <QScrollBar>
+#include "inc/blcdialog.h"
+//#include <QDebug>
 
 BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, rawinfoDialog::bayerMode bm, QSize rawsz, quint16 bd) :
     QDialog(parent),
-    useTip(new QLabel(tr("<font size='-1'><p>双击下面的raw文件名切换</p>"
-                         "<p>只兼容输出</p>"
-                         "<p><b>V300</b>的blc xml</p>"
-                         "<p>blc计算方法:</p>"
+    useTip(new QLabel(tr("<font size='-1'><p>blc计算方法:</p>"
                          "<p>1.将选中的raw文件按照ISO分组</p>"
                          "<p>2.每一组ISO的raw叠加求平均</p>"
                          "<p>3.11x11范围平均模糊</p>"
                          "<p>4.长宽都缩小至1/16</p>"
                          "<p>5.水平、竖直方向拟合(2阶)</p>"
-                         "<p>6.按照11x11格点位置取拟合后的值</p></font>"), this)),
+                         "<p>6.按照11x11格点位置取拟合后的值</p>"
+                         "<p>7.不满10组iso的情况，将使用最后一组参数填充至10组</p></font>"
+                         "<p>双击下面的raw文件名滚动到对应的标定参数位置</p>"
+                         "<p>点击\"保存xml\"可保存<b>V300</b>的blc xml</p>"), this)),
     treeWgt(new QTreeWidget(this)),
     imgView(new gridImgLabel(this, "0x0", NULL)),
     grid_box(new QGroupBox(tr("grid option"), this)),
@@ -30,15 +32,22 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
     grid5_5(new QRadioButton(tr("grid 5x5"), this)),
     grid11_11(new QRadioButton(tr("grid 11x11"), this)),
     blcDataEdit(new QPlainTextEdit(this)),
+    blcDataChanged(false),
+    xmlFn(),//需要选择一个文件绑定这个文件到blcDateEdit
+    preWorkPath(QDir::currentPath()),//保存xml的路径
     saveXml(new QPushButton(tr("保存xml"), this)),
+    saveAsXml(new QPushButton(tr("另存为"), this)),
     xmlDoc(new QDomDocument),
     hlayout(new QHBoxLayout(this)),
     blc_fn_map(blc_map),
     bayerMode(bm),
     rawSize(rawsz),
     bitDepth(bd),
-    showImgBuf(NULL)
+    showImgBuf(NULL),
+    xmlHL(NULL)
 {
+    blcDataEdit->setWordWrapMode(QTextOption::NoWrap);
+    blcDataEdit->setCenterOnScroll(true);
     resize(1024, 600);
     hlayout->setSpacing(6);
     hlayout->setContentsMargins(11,11,11,11);
@@ -90,7 +99,11 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
 
     QVBoxLayout* rightVerLayout = new QVBoxLayout;
     rightVerLayout->addWidget(blcDataEdit, 1);
-    rightVerLayout->addWidget(saveXml, 0, Qt::AlignLeft|Qt::AlignVCenter);
+    QHBoxLayout* buttonLayout = new QHBoxLayout;
+    buttonLayout->addWidget(saveXml, 1);
+    buttonLayout->addWidget(saveAsXml, 1);
+    buttonLayout->addStretch(2);
+    rightVerLayout->addLayout(buttonLayout);
     hlayout->addLayout(rightVerLayout, 1);
 
     QDomProcessingInstruction insturction = xmlDoc->createProcessingInstruction("xml", "version='1.0' encoding='utf-8'");
@@ -112,6 +125,9 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
     connect(noGrid, &QRadioButton::toggled, this, &BLCDialog::onNoGridToggled);
     connect(grid5_5, &QRadioButton::toggled, this, &BLCDialog::onGrid5_5_Toggled);
     connect(grid11_11, &QRadioButton::toggled, this, &BLCDialog::onGrid11_11_Toggled);
+    connect(saveXml, &QPushButton::clicked, this, &BLCDialog::onSaveXmlButton);
+    connect(saveAsXml, &QPushButton::clicked, this, &BLCDialog::onSaveAsButton);
+    connect(blcDataEdit->document(), &QTextDocument::contentsChanged, this, &BLCDialog::onContextChanged);
 
 
     int totalTasks = 0;
@@ -121,16 +137,20 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
     }
     clacBLCprogress = new CalcBlcProgressDlg(this, totalTasks);//创建进度对话框
 
-    calcBLCthread = new calcBlcThread(this, blc_fn_map, bayerMode, rawSize, bitDepth, xmlDoc, docRoot);//创建新线程处理blc raw,并且通知对话框进度更新，完成后自动关闭
-    calcBLCthread->start();
+    calcBLCthread = new calcBlcThread(this, blc_fn_map, bayerMode, rawSize, bitDepth, xmlDoc, docRoot, quint16(totalTasks));//创建新线程处理blc raw,并且通知对话框进度更新，完成后自动关闭
+
     connect(calcBLCthread, &calcBlcThread::currentTaskId, clacBLCprogress, &CalcBlcProgressDlg::handleCurrentTaskId);
     connect(calcBLCthread, &calcBlcThread::pyInitFail, clacBLCprogress, &CalcBlcProgressDlg::reject);//如果Py初始化失败，则进度对话框关闭并导致显示错误信息
+    connect(calcBLCthread, &calcBlcThread::destroyed, this, &BLCDialog::onThreadDestroyed);
+    //connect(calcBLCthread, &calcBlcThread::finished, calcBLCthread, &QObject::deleteLater); 这里暂时不用，设置在对话框关闭时退出线程
+    calcBLCthread->start();
 
     if(clacBLCprogress->exec()==CalcBlcProgressDlg::Accepted){
         QString showXmlDoc;
         QTextStream xmlOutStream(&showXmlDoc, QIODevice::WriteOnly);
         xmlDoc->save(xmlOutStream, 4);
         blcDataEdit->setPlainText(showXmlDoc);
+        xmlHL = new BlcXmlHighlight(blcDataEdit->document());
     }
     else{
         blcDataEdit->setPlainText(tr("计算出错，请检查环境配置、raw文件和输入信息是否匹配"));
@@ -139,6 +159,8 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
 
 BLCDialog::~BLCDialog()
 {
+    if(xmlHL!=NULL)
+        delete xmlHL;
     if(showImgBuf!=NULL)
         delete[] showImgBuf;
     if(!(xmlDoc->isNull())){
@@ -153,7 +175,7 @@ void BLCDialog::onTreeItemDoubleClicked(QTreeWidgetItem *item, int column)
     else{
         QString clicked_real_file;
         QString rootText  = item->parent()->text(column);
-        int iso = rootText.right(rootText.size()-3).toInt();
+        qint32 iso = rootText.right(rootText.size()-3).toInt();//ISO100 排除掉ISO三个字符，拿到整数值
         QStringList specificISO_fn = blc_fn_map[iso];
         for(QStringList::iterator it = specificISO_fn.begin(); it!=specificISO_fn.end(); it++){
             QFileInfo finfo(*it);
@@ -163,9 +185,20 @@ void BLCDialog::onTreeItemDoubleClicked(QTreeWidgetItem *item, int column)
                 break;
             }
         }
-        if(clicked_real_file.isEmpty())
+        if(clicked_real_file.isEmpty())//如果没有找到匹配的raw文件，不做处理
             return;
-        showRawFile(clicked_real_file);
+        showRawFile(clicked_real_file);//更改raw显示
+        Q_ASSERT(iso>0);
+        quint16 ae_gain = quint16(iso/50);
+        QString regexp = QString("<ae_gain>\\s*%1\\s*</ae_gain>").arg(ae_gain);
+        QRegularExpression express(regexp);
+        QTextCursor txtCsr = blcDataEdit->document()->find(express);//从开头开始搜索
+        if(!txtCsr.isNull())
+            blcDataEdit->setTextCursor(txtCsr);
+
+        //int curpos = blcDataEdit->verticalScrollBar()->value();
+        //blcDataEdit->verticalScrollBar()->setValue(curpos+blcDataEdit->verticalScrollBar()->pageStep());
+
     }
 }
 
@@ -230,160 +263,75 @@ void BLCDialog::onGrid11_11_Toggled(bool statu)
     }
 }
 
-void BLCDialog::onDestoryDlg()
+void BLCDialog::onThreadDestroyed(QObject *obj)
 {
+    Q_UNUSED(obj);
     calcBLCthread->quit();
     calcBLCthread->wait();
 }
 
-//qint32 BLCDialog::onProgressDlgRun()
-//{
-    //-----一次性计算过程，如果多次，import 模块内容应放在构造函数里面，并保持PyObject*指针，并在析构函数中Py_DECREF
-    //import_array();
-    //PyObject* pNdimageModule = PyImport_Import(PyUnicode_FromString("scipy.ndimage"));
-    //PyObject* pUniformFunc = PyObject_GetAttrString(pNdimageModule, "uniform_filter");
-    //PyObject* pZoomFunc = PyObject_GetAttrString(pNdimageModule, "zoom");
-    //PyObject* pSignalModule = PyImport_Import(PyUnicode_FromString("scipy.signal"));
-    //PyObject* pFuncSavgol = PyObject_GetAttrString(pSignalModule, "savgol_filter");
-    //if(pNdimageModule==NULL || pUniformFunc==NULL || pZoomFunc==NULL || pSignalModule==NULL || pFuncSavgol==NULL){
-    //    Py_XDECREF(pSignalModule);
-    //    Py_XDECREF(pZoomFunc);
-    //    Py_XDECREF(pUniformFunc);
-    //    Py_XDECREF(pNdimageModule);
-    //    Py_XDECREF(pFuncSavgol);
-    //    Py_Finalize();
-    //    return -1;
-    //}
-    //----------------------end----------------------------
+void BLCDialog::onSaveXmlButton()
+{
+    if(xmlFn.isEmpty()){
+        xmlFn = QFileDialog::getSaveFileName(this, tr("保存为..."), preWorkPath, "XML file(*.xml);;All file(*.*)");
+        if(xmlFn.isEmpty())
+            return;
+        QFileInfo fn_info(xmlFn);
+        preWorkPath = fn_info.absoluteFilePath();
+        QFile xmlF(xmlFn);
+        if(!xmlF.open(QFile::WriteOnly|QFile::Text|QFile::Truncate)){
+            QMessageBox::critical(this, tr("error"), tr("打开文件失败..."), QMessageBox::Ok);
+            return;
+        }
+        QTextStream out(&xmlF);
+        QString context = blcDataEdit->document()->toPlainText();
+        out<<context;
+        xmlF.close();
+        blcDataChanged = false;
+    }
+    else{
+        QFileInfo info(xmlFn);
+        if(info.exists() && blcDataChanged==false)//如果文件已经存在并且编辑内容没有改变，则直接返回
+            return;
+        else{
+            QFile xmlF(xmlFn);
+            if(!xmlF.open(QFile::WriteOnly|QFile::Text|QFile::Truncate)){
+                QMessageBox::critical(this, tr("error"), tr("打开文件失败..."), QMessageBox::Ok);
+                return;
+            }
+            QTextStream out(&xmlF);
+            QString context = blcDataEdit->document()->toPlainText();
+            QString show = context.left(100);
+            xmlF.close();
+            blcDataChanged = false;
+        }
+    }
+}
 
-    //int numTasks = 0;
-    //for(QMap<qint32, QStringList>::iterator it=blc_fn_map.begin(); it!=blc_fn_map.end(); it++){
-    //    QStringList files = it.value();
-    //    numTasks += files.size();
-    //}
-    //
-    //qreal* bayer_r_buf = new qreal[rawSize.width()*rawSize.height()/4];
-    //qreal* bayer_gr_buf = new qreal[rawSize.width()*rawSize.height()/4];
-    //qreal* bayer_gb_buf = new qreal[rawSize.width()*rawSize.height()/4];
-    //qreal* bayer_b_buf = new qreal[rawSize.width()*rawSize.height()/4];
-    //memset((void*)bayer_r_buf, 0, sizeof(qreal)*rawSize.width()*rawSize.height()/4);
-    //memset((void*)bayer_gr_buf, 0, sizeof(qreal)*rawSize.width()*rawSize.height()/4);
-    //memset((void*)bayer_gb_buf, 0, sizeof(qreal)*rawSize.width()*rawSize.height()/4);
-    //memset((void*)bayer_b_buf, 0, sizeof(qreal)*rawSize.width()*rawSize.height()/4);
-    //
-    //quint8* raw_buf;
-    //if(bitDepth>8)
-    //    raw_buf = new quint8[rawSize.width()*rawSize.height()*2];
-    //else
-    //    raw_buf = new quint8[rawSize.width()*rawSize.height()];
-    //
-    //npy_intp shape[2] = {rawSize.height()/2, rawSize.width()/2};
+void BLCDialog::onSaveAsButton()
+{
+    QString saveAsName = QFileDialog::getSaveFileName(this, tr("保存为..."), preWorkPath, "XML file(*.xml);;All file(*.*)");
+    if(saveAsName.isEmpty())
+        return;
+    QFileInfo fn_info(saveAsName);
+    preWorkPath = fn_info.absoluteFilePath();
+    QFile xmlF(saveAsName);
+    if(!xmlF.open(QFile::WriteOnly|QFile::Text|QFile::Truncate)){
+        QMessageBox::critical(this, tr("error"), tr("打开文件失败..."), QMessageBox::Ok);
+        return;
+    }
+    QTextStream out(&xmlF);
+    QString context = blcDataEdit->document()->toPlainText();
+    out<<context;
+    xmlF.close();
+}
 
-//    int i = 0, dataIdx=0;
-//    QVector<quint16> stored_ae_gain;
-//    for(QMap<qint32, QStringList>::iterator it=blc_fn_map.begin(); it!=blc_fn_map.end(); it++){
-//        quint16 r_blc_be, gr_blc_be, gb_blc_be, b_blc_be;
-//        QVector<quint16> r_grid(121), gr_grid(121), gb_grid(121), b_grid(121);
-//        quint16 ae_gain = it.key()/50;
-//        for(QStringList::Iterator str=it.value().begin(); str!=it.value().end(); str++){
-//            QFile raw_f(*str);
-//            raw_f.open(QFile::ReadOnly);
-//            raw_f.read((char*)raw_buf, bitDepth>8?(2*rawSize.width()*rawSize.height()):rawSize.width()*rawSize.height());
-//            raw_f.close();
-//            addRaw2FourChannel(raw_buf, bayer_r_buf, bayer_gr_buf, bayer_gb_buf, bayer_b_buf);
-//            memset((void*)raw_buf, 0, bitDepth>8?(2*rawSize.width()*rawSize.height()):rawSize.width()*rawSize.height());
-//            i++;
-//        }
-//        avgBayerChannel(bayer_r_buf, it.value().size());
-//        avgBayerChannel(bayer_gr_buf, it.value().size());
-//        avgBayerChannel(bayer_gb_buf, it.value().size());
-//        avgBayerChannel(bayer_b_buf, it.value().size());
-//        PyArrayObject* r = (PyArrayObject*)PyArray_SimpleNewFromData(2, shape, NPY_FLOAT64, (void*)bayer_r_buf);
-//        PyArrayObject* gr = (PyArrayObject*)PyArray_SimpleNewFromData(2, shape, NPY_FLOAT64, (void*)bayer_gr_buf);
-//        PyArrayObject* gb = (PyArrayObject*)PyArray_SimpleNewFromData(2, shape, NPY_FLOAT64, (void*)bayer_gb_buf);
-//        PyArrayObject* b = (PyArrayObject*)PyArray_SimpleNewFromData(2, shape, NPY_FLOAT64, (void*)bayer_b_buf);
+void BLCDialog::onContextChanged()
+{
+    blcDataChanged = true;
+}
 
-//        PyArrayObject* p_blur_R = (PyArrayObject*)PyObject_CallFunction(pUniformFunc, "(Oi)", (PyObject*)r, 11);
-//        PyArrayObject* p_blur_Gr = (PyArrayObject*)PyObject_CallFunction(pUniformFunc, "(Oi)", (PyObject*)gr, 11);
-//        PyArrayObject* p_blur_Gb = (PyArrayObject*)PyObject_CallFunction(pUniformFunc, "(Oi)", (PyObject*)gb, 11);
-//        PyArrayObject* p_blur_B = (PyArrayObject*)PyObject_CallFunction(pUniformFunc, "(Oi)", (PyObject*)b, 11);
-//        //因为是手动创建buf然后传给ndarray，所以r 没有own_data_flag，DECREF(r)不会释放data内存
-//        Py_DECREF(r);
-//        Py_DECREF(gr);
-//        Py_DECREF(gb);
-//        Py_DECREF(b);
-//        PyArrayObject* zoom_out_R = (PyArrayObject*)PyObject_CallFunction(pZoomFunc, "(OfOis)", (PyObject*)p_blur_R, 0.0625, Py_None, 3, "nearest");
-//        PyArrayObject* zoom_out_Gr = (PyArrayObject*)PyObject_CallFunction(pZoomFunc, "(OfOis)", (PyObject*)p_blur_Gr, 0.0625, Py_None, 3, "nearest");
-//        PyArrayObject* zoom_out_Gb = (PyArrayObject*)PyObject_CallFunction(pZoomFunc, "(OfOis)", (PyObject*)p_blur_Gb, 0.0625, Py_None, 3, "nearest");
-//        PyArrayObject* zoom_out_B = (PyArrayObject*)PyObject_CallFunction(pZoomFunc, "(OfOis)", (PyObject*)p_blur_B, 0.0625, Py_None, 3, "nearest");
 
-//        Py_DECREF(p_blur_R);//own_data_flag=1, 不需要手动释放data
-//        Py_DECREF(p_blur_Gr);
-//        Py_DECREF(p_blur_Gb);
-//        Py_DECREF(p_blur_B);
-
-//        npy_int32 winLen_order1 = zoom_out_R->dimensions[1]/8;
-//        winLen_order1 = (((npy_uint32)winLen_order1>>1)<<1)+1;
-//        npy_int32 winLen_order0 = zoom_out_R->dimensions[0]/8;
-//        winLen_order0 = (((npy_uint32)winLen_order0>>1)<<1)+1;
-
-//        PyArrayObject* savgol_r_order1 = (PyArrayObject*)PyObject_CallFunction(pFuncSavgol, "(Oiiifi)", (PyObject*)zoom_out_R, winLen_order1, 2, 0, 1.0, 1);
-//        Py_DECREF(zoom_out_R);
-//        PyArrayObject* savgol_r_order0 = (PyArrayObject*)PyObject_CallFunction(pFuncSavgol, "(Oiiifi)", (PyObject*)savgol_r_order1, winLen_order0, 2, 0, 1.0, 0);
-
-//        PyArrayObject* savgol_gr_order1 = (PyArrayObject*)PyObject_CallFunction(pFuncSavgol, "(Oiiifi)", (PyObject*)zoom_out_Gr, winLen_order1, 2, 0, 1.0, 1);
-//        Py_DECREF(zoom_out_Gr);
-//        PyArrayObject* savgol_gr_order0 = (PyArrayObject*)PyObject_CallFunction(pFuncSavgol, "(Oiiifi)", (PyObject*)savgol_gr_order1, winLen_order0, 2, 0, 1.0, 0);
-
-//        PyArrayObject* savgol_gb_order1 = (PyArrayObject*)PyObject_CallFunction(pFuncSavgol, "(Oiiifi)", (PyObject*)zoom_out_Gb, winLen_order1, 2, 0, 1.0, 1);
-//        Py_DECREF(zoom_out_Gb);
-//        PyArrayObject* savgol_gb_order0 = (PyArrayObject*)PyObject_CallFunction(pFuncSavgol, "(Oiiifi)", (PyObject*)savgol_gb_order1, winLen_order0, 2, 0, 1.0, 0);
-
-//        PyArrayObject* savgol_b_order1 = (PyArrayObject*)PyObject_CallFunction(pFuncSavgol, "(Oiiifi)", (PyObject*)zoom_out_B, winLen_order1, 2, 0, 1.0, 1);
-//        Py_DECREF(zoom_out_B);
-//        PyArrayObject* savgol_b_order0 = (PyArrayObject*)PyObject_CallFunction(pFuncSavgol, "(Oiiifi)", (PyObject*)savgol_b_order1, winLen_order0, 2, 0, 1.0, 0);
-
-//        Q_ASSERT(savgol_r_order0->nd==2 && savgol_gr_order0->nd==2 && savgol_gb_order0->nd==2 && savgol_b_order0->nd==2);
-//        r_blc_be  = avgBlcValueBE((qreal*)(savgol_r_order0->data),  savgol_r_order0->dimensions[0]*savgol_r_order0->dimensions[1]);
-//        gr_blc_be = avgBlcValueBE((qreal*)(savgol_gr_order0->data), savgol_gr_order0->dimensions[0]*savgol_gr_order0->dimensions[1]);
-//        gb_blc_be = avgBlcValueBE((qreal*)(savgol_gb_order0->data), savgol_gb_order0->dimensions[0]*savgol_gb_order0->dimensions[1]);
-//        b_blc_be  = avgBlcValueBE((qreal*)(savgol_b_order0->data),  savgol_b_order0->dimensions[0]*savgol_b_order0->dimensions[1]);
-//        calGridValue((qreal*)(savgol_r_order0->data), savgol_r_order0->dimensions[0], savgol_r_order0->dimensions[1], r_grid);
-//        calGridValue((qreal*)(savgol_gr_order0->data), savgol_gr_order0->dimensions[0], savgol_gr_order0->dimensions[1], gr_grid);
-//        calGridValue((qreal*)(savgol_gb_order0->data), savgol_gb_order0->dimensions[0], savgol_gb_order0->dimensions[1], gb_grid);
-//        calGridValue((qreal*)(savgol_b_order0->data), savgol_b_order0->dimensions[0], savgol_b_order0->dimensions[1], b_grid);
-
-//        if(!stored_ae_gain.contains(ae_gain)){
-//            createBlcDateNode(dataIdx, ae_gain, r_blc_be, gr_blc_be, gb_blc_be, b_blc_be, r_grid, gr_grid, gb_grid, b_grid);
-//            dataIdx++;
-//        }
-
-//        Py_DECREF(savgol_r_order1);
-//        Py_DECREF(savgol_r_order0);
-//        Py_DECREF(savgol_gr_order1);
-//        Py_DECREF(savgol_gr_order0);
-//        Py_DECREF(savgol_gb_order1);
-//        Py_DECREF(savgol_gb_order0);
-//        Py_DECREF(savgol_b_order1);
-//        Py_DECREF(savgol_b_order0);
-
-//        memset((void*)bayer_r_buf, 0, sizeof(qreal)*rawSize.width()*rawSize.height()/4);
-//        memset((void*)bayer_gr_buf, 0, sizeof(qreal)*rawSize.width()*rawSize.height()/4);
-//        memset((void*)bayer_gb_buf, 0, sizeof(qreal)*rawSize.width()*rawSize.height()/4);
-//        memset((void*)bayer_b_buf, 0, sizeof(qreal)*rawSize.width()*rawSize.height()/4);
-//    }
-//    Py_XDECREF(pSignalModule);
-//    Py_XDECREF(pZoomFunc);
-//    Py_XDECREF(pUniformFunc);
-//    Py_XDECREF(pNdimageModule);
-//    Py_XDECREF(pFuncSavgol);
-//    delete[] raw_buf;
-//    delete[] bayer_b_buf;
-//    delete[] bayer_gb_buf;
-//    delete[] bayer_gr_buf;
-//    delete[] bayer_r_buf;
-//    return 0;
-//}
 //-------class gridImgLabel------------
 gridImgLabel::gridImgLabel(QWidget* parent, QString gridFlag, QPixmap* const img):
     QLabel(parent),
