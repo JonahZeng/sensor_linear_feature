@@ -12,7 +12,7 @@ class calcBlcThread : public QThread
 {
     Q_OBJECT
 public:
-    calcBlcThread(QObject *parent, QMap<qint32, QStringList>& iso_fn, rawinfoDialog::bayerMode bm, QSize rawsz, quint16 bd, QDomDocument* doc, QDomElement& root);
+    calcBlcThread(QObject *parent, QMap<qint32, QStringList>& iso_fn, rawinfoDialog::bayerMode bm, QSize rawsz, quint16 bd, QDomDocument* doc, QDomElement& root, quint16 ts);
 protected:
     void run();
 signals:
@@ -26,6 +26,7 @@ private:
     quint16 taskID;
     QDomDocument* xmlDoc;
     QDomElement docRoot;
+    quint16 maxTask;
 private:
     void createBlcDateNode(quint8 order,
                            quint16 aeGain,
