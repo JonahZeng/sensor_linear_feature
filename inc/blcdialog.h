@@ -3,6 +3,8 @@
 
 #include "inc/calcblcprogressdlg.h"
 #include "inc/calcblcthread.h"
+#include "inc/rawinfodialog.h"
+#include "inc/blcxmlhighlight.h"
 #include <QPushButton>
 #include <QTreeWidget>
 #include <QLabel>
@@ -11,9 +13,8 @@
 #include <QHBoxLayout>
 #include <QMap>
 #include <QPlainTextEdit>
-#include "inc/rawinfodialog.h"
-#include "inc/blcxmlhighlight.h"
 #include <qdom.h>
+#include <QSurface3DSeries>
 
 class gridImgLabel : public QLabel
 {
@@ -76,6 +77,13 @@ private:
     CalcBlcProgressDlg* clacBLCprogress;
     calcBlcThread* calcBLCthread;
     BlcXmlHighlight* xmlHL;
+
+    Q3DSurface* threeDSurface;
+    QWidget* surfaceContainerWgt;
+    QRadioButton *surface_r, *surface_gr, *surface_gb, *surface_b;
+    QMap<quint16, SurfaceDateArrP_4> aeGain_surfaceData_4p_map;
+
+    QSurface3DSeries showOnSreenSeries;
 
 
 private:

@@ -1,8 +1,9 @@
-#include "inc/calcblcthread.h"
+﻿#include "inc/calcblcthread.h"
 #include "numpy/arrayobject.h"
 #include <QFile>
 
-calcBlcThread::calcBlcThread(QObject *parent, QMap<qint32, QStringList>& iso_fn, rawinfoDialog::bayerMode bm, QSize rawsz, quint16 bd, QDomDocument* doc, QDomElement& root, quint16 ts)
+calcBlcThread::calcBlcThread(QObject *parent, QMap<qint32, QStringList>& iso_fn, rawinfoDialog::bayerMode bm,
+                             QSize rawsz, quint16 bd, QDomDocument* doc, QDomElement& root, quint16 ts, QMap<quint16, SurfaceDateArrP_4>* const p_surface_data_map)
     : QThread(parent),
      blc_fn_map(iso_fn),
      bayerMode(bm),
@@ -11,8 +12,10 @@ calcBlcThread::calcBlcThread(QObject *parent, QMap<qint32, QStringList>& iso_fn,
      taskID(0),
      xmlDoc(doc),
      docRoot(root),
-     maxTask(ts)
+     maxTask(ts),
+     pSurfaceDataMap(p_surface_data_map)
 {
+    Q_ASSERT(pSurfaceDataMap!=NULL && pSurfaceDataMap->size()==0);//必须保证传进来的map事先已经分配并且没有内容
     if(_import_array()< 0){ //WIN7+VS2017+PYTHON3.5.4 测试可以
         emit pyInitFail();
     }
@@ -140,6 +143,43 @@ void calcBlcThread::run()
 
         if(!stored_ae_gain.contains(ae_gain) && dataIdx<BLC_TOTAL_DATA){
             createBlcDateNode(dataIdx, ae_gain, r_blc_be, gr_blc_be, gb_blc_be, b_blc_be, r_grid, gr_grid, gb_grid, b_grid);
+
+            SurfaceDateArrP_4 surface_data_4_p;
+            surface_data_4_p.surfaceDateArr_r = new QSurfaceDataArray;//先申请4个 data array，然后去填充；依次为r, gr, gb, b
+            surface_data_4_p.surfaceDateArr_gr = new QSurfaceDataArray;
+            surface_data_4_p.surfaceDateArr_gb = new QSurfaceDataArray;
+            surface_data_4_p.surfaceDateArr_b = new QSurfaceDataArray;
+            for(quint32 row=0; row<savgol_r_order0->dimensions[0]; row++){
+                QSurfaceDataRow* row_p_r = new QSurfaceDataRow(savgol_r_order0->dimensions[1]);//申请column个3d point vector
+                for(quint32 col=0; col<savgol_r_order0->dimensions[1]; col++){
+                    (*row_p_r)[col].setPosition(QVector3D(col, ((qreal*)(savgol_r_order0->data))[row*savgol_r_order0->dimensions[1]+col], row));
+                }
+                surface_data_4_p.surfaceDateArr_r->append(row_p_r);
+            }
+            for(quint32 row=0; row<savgol_gr_order0->dimensions[0]; row++){
+                QSurfaceDataRow* row_p_gr = new QSurfaceDataRow(savgol_gr_order0->dimensions[1]);//申请column个3d point vector
+                for(quint32 col=0; col<savgol_gr_order0->dimensions[1]; col++){
+                    (*row_p_gr)[col].setPosition(QVector3D(col, ((qreal*)(savgol_gr_order0->data))[row*savgol_gr_order0->dimensions[1]+col], row));
+                }
+                surface_data_4_p.surfaceDateArr_gr->append(row_p_gr);
+            }
+            for(quint32 row=0; row<savgol_gb_order0->dimensions[0]; row++){
+                QSurfaceDataRow* row_p_gb = new QSurfaceDataRow(savgol_gb_order0->dimensions[1]);//申请column个3d point vector
+                for(quint32 col=0; col<savgol_gb_order0->dimensions[1]; col++){
+                    (*row_p_gb)[col].setPosition(QVector3D(col, ((qreal*)(savgol_gb_order0->data))[row*savgol_gb_order0->dimensions[1]+col], row));
+                }
+                surface_data_4_p.surfaceDateArr_gb->append(row_p_gb);
+            }
+            for(quint32 row=0; row<savgol_b_order0->dimensions[0]; row++){
+                QSurfaceDataRow* row_p_b = new QSurfaceDataRow(savgol_b_order0->dimensions[1]);//申请column个3d point vector
+                for(quint32 col=0; col<savgol_b_order0->dimensions[1]; col++){
+                    (*row_p_b)[col].setPosition(QVector3D(col, ((qreal*)(savgol_b_order0->data))[row*savgol_b_order0->dimensions[1]+col], row));
+                }
+                surface_data_4_p.surfaceDateArr_b->append(row_p_b);
+            }
+            if(!pSurfaceDataMap->contains(ae_gain))
+                (*pSurfaceDataMap)[ae_gain] = surface_data_4_p;
+
             stored_ae_gain.append(ae_gain);
             dataIdx++;
         }

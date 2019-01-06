@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui charts xml
+QT       += core gui charts xml datavisualization
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 CONFIG += c++11
@@ -61,20 +61,20 @@ FORMS += \
     ui\rightshiftdialog.ui \
     ui\calcblcprogressdlg.ui
 
-INCLUDEPATH +=  C:\python3\include \
-        C:\python3\Lib\site-packages\numpy\core\include
+#INCLUDEPATH +=  C:\python3\include \
+#        C:\python3\Lib\site-packages\numpy\core\include
         #E:\yqzeng\opencv3\build_x64\include \
 
-LIBS += C:\python3\libs\python35.lib
+#LIBS += C:\python3\libs\python35.lib
         #E:\yqzeng\opencv3\build_x64\x64\vc15\lib\opencv_core341d.lib \
         #E:\yqzeng\opencv3\build_x64\x64\vc15\lib\opencv_imgproc341d.lib \
 
 
-#INCLUDEPATH += D:\opencv3-4-1\build\include \
-#        C:\python36\include \
-#        C:\python36\Lib\site-packages\numpy\core\include
-#
-#LIBS += C:\python36\libs\python36.lib \
+INCLUDEPATH +=  C:\python36\include \
+        C:\python36\Lib\site-packages\numpy\core\include
+#       D:\opencv3-4-1\build\include \
+
+LIBS += C:\python36\libs\python36.lib
 #        D:\opencv3-4-1\build\x64\vc14\lib\opencv_core343.lib \
 #        D:\opencv3-4-1\build\x64\vc14\lib\opencv_imgproc343.lib
 

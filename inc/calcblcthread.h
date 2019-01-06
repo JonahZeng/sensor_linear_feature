@@ -1,18 +1,36 @@
 #ifndef INCCALCBLCTHREAD_H
 #define INCCALCBLCTHREAD_H
 
+
+#include "inc/rawinfodialog.h"
 #include <QThread>
 #include <QMap>
 #include <QStringList>
 #include <QDomElement>
 #include <QDomDocument>
-#include "inc/rawinfodialog.h"
+#include <Q3DSurface>
+using namespace QtDataVisualization;
+
+typedef struct{
+    QSurfaceDataArray* surfaceDateArr_r;
+    QSurfaceDataArray* surfaceDateArr_gr;
+    QSurfaceDataArray* surfaceDateArr_gb;
+    QSurfaceDataArray* surfaceDateArr_b;
+}SurfaceDateArrP_4;
 
 class calcBlcThread : public QThread
 {
     Q_OBJECT
 public:
-    calcBlcThread(QObject *parent, QMap<qint32, QStringList>& iso_fn, rawinfoDialog::bayerMode bm, QSize rawsz, quint16 bd, QDomDocument* doc, QDomElement& root, quint16 ts);
+    calcBlcThread(QObject *parent,
+                  QMap<qint32, QStringList>& iso_fn,
+                  rawinfoDialog::bayerMode bm,
+                  QSize rawsz,
+                  quint16 bd,
+                  QDomDocument* doc,
+                  QDomElement& root,
+                  quint16 ts,
+                  QMap<quint16, SurfaceDateArrP_4>* const p_surface_data_map);
 protected:
     void run();
 signals:
@@ -27,6 +45,7 @@ private:
     QDomDocument* xmlDoc;
     QDomElement docRoot;
     quint16 maxTask;
+    QMap<quint16, SurfaceDateArrP_4>* pSurfaceDataMap;
 private:
     void createBlcDateNode(quint8 order,
                            quint16 aeGain,

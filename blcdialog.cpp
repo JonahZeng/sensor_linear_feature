@@ -1,4 +1,4 @@
-#if _MSC_VER > 1600
+﻿#if _MSC_VER > 1600
 #pragma execution_character_set("utf-8")  //fuck MSVC complior, use UTF-8, not gb2312/gbk
 #endif
 
@@ -11,6 +11,7 @@
 #include <QFileDialog>
 #include <QScrollBar>
 #include "inc/blcdialog.h"
+#include <QtDataVisualization/QValue3DAxis>
 //#include <QDebug>
 
 BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, rawinfoDialog::bayerMode bm, QSize rawsz, quint16 bd) :
@@ -44,8 +45,19 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
     rawSize(rawsz),
     bitDepth(bd),
     showImgBuf(NULL),
-    xmlHL(NULL)
+    xmlHL(NULL),
+    threeDSurface(new Q3DSurface),
+    surfaceContainerWgt(QWidget::createWindowContainer(threeDSurface)),
+    aeGain_surfaceData_4p_map(),
+    showOnSreenSeries(new QSurface3DSeries)
 {
+    if(!threeDSurface->hasContext()){
+        QMessageBox::critical(this, tr("error"), tr("init opengl fail..."), QMessageBox::Ok);
+    }
+    threeDSurface->setAxisX(new QValue3DAxis);
+    threeDSurface->setAxisY(new QValue3DAxis);
+    threeDSurface->setAxisZ(new QValue3DAxis);
+
     blcDataEdit->setWordWrapMode(QTextOption::NoWrap);
     blcDataEdit->setCenterOnScroll(true);
     resize(1024, 600);
@@ -93,9 +105,33 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
 
     hlayout->addLayout(leftVerLayout);
 
+    QVBoxLayout* bayerVerLayout = new QVBoxLayout;//设置3d surface bayer选项radiobutton排列
+    QGroupBox* surfaceBox = new QGroupBox(tr("显示"));
+    surface_r = new QRadioButton(tr("R"));
+    surface_gr = new QRadioButton(tr("Gr"));
+    surface_gb = new QRadioButton(tr("Gb"));
+    surface_b = new QRadioButton(tr("B"));
+    bayerVerLayout->addWidget(surface_r);
+    bayerVerLayout->addWidget(surface_gr);
+    bayerVerLayout->addWidget(surface_gb);
+    bayerVerLayout->addWidget(surface_b);
+    surfaceBox->setLayout(bayerVerLayout);
+    surface_r->setChecked(true);
+    surface_gr->setChecked(false);
+    surface_gb->setChecked(false);
+    surface_b->setChecked(false);
+
+    QHBoxLayout* surfaceAreaLayout = new QHBoxLayout;//设置3d surface整块区域水平layout
+    surfaceAreaLayout->addWidget(surfaceContainerWgt, 1);
+    surfaceAreaLayout->addWidget(surfaceBox);
+
     imgView->setFrameStyle(QFrame::Box);
     imgView->setScaledContents(true);
-    hlayout->addWidget(imgView, 1);
+
+    QVBoxLayout* middleLayout = new QVBoxLayout;
+    middleLayout->addWidget(imgView, 1);
+    middleLayout->addLayout(surfaceAreaLayout, 1);
+    hlayout->addLayout(middleLayout, 1); //设置中间包括img显示部分，和3d suface显示部分的layout
 
     QVBoxLayout* rightVerLayout = new QVBoxLayout;
     rightVerLayout->addWidget(blcDataEdit, 1);
@@ -137,7 +173,7 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
     }
     clacBLCprogress = new CalcBlcProgressDlg(this, totalTasks);//创建进度对话框
 
-    calcBLCthread = new calcBlcThread(this, blc_fn_map, bayerMode, rawSize, bitDepth, xmlDoc, docRoot, quint16(totalTasks));//创建新线程处理blc raw,并且通知对话框进度更新，完成后自动关闭
+    calcBLCthread = new calcBlcThread(this, blc_fn_map, bayerMode, rawSize, bitDepth, xmlDoc, docRoot, quint16(totalTasks), &aeGain_surfaceData_4p_map);//创建新线程处理blc raw,并且通知对话框进度更新，完成后自动关闭
 
     connect(calcBLCthread, &calcBlcThread::currentTaskId, clacBLCprogress, &CalcBlcProgressDlg::handleCurrentTaskId);
     connect(calcBLCthread, &calcBlcThread::pyInitFail, clacBLCprogress, &CalcBlcProgressDlg::reject);//如果Py初始化失败，则进度对话框关闭并导致显示错误信息
@@ -151,9 +187,14 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
         xmlDoc->save(xmlOutStream, 4);
         blcDataEdit->setPlainText(showXmlDoc);
         xmlHL = new BlcXmlHighlight(blcDataEdit->document());
+
+        showOnSreenSeries.dataProxy()->resetArray(aeGain_surfaceData_4p_map.first().surfaceDateArr_r);//暂时显示第一个r
+        threeDSurface->addSeries(&showOnSreenSeries);
+        threeDSurface->show();
     }
     else{
         blcDataEdit->setPlainText(tr("计算出错，请检查环境配置、raw文件和输入信息是否匹配"));
+        threeDSurface->hide();
     }
 }
 
@@ -165,6 +206,34 @@ BLCDialog::~BLCDialog()
         delete[] showImgBuf;
     if(!(xmlDoc->isNull())){
         delete xmlDoc;
+    }
+    if(aeGain_surfaceData_4p_map.size()>0){
+         QMap<quint16, SurfaceDateArrP_4>::iterator it=aeGain_surfaceData_4p_map.begin();
+         while(it!=aeGain_surfaceData_4p_map.end()){
+             SurfaceDateArrP_4 tmp = it.value();
+             QSurfaceDataArray* arr_ptr = tmp.surfaceDateArr_r;
+             for(QSurfaceDataArray::iterator arr_it=arr_ptr->begin(); arr_it!=arr_ptr->end(); arr_it++){
+                 delete *arr_it; //释放dataarray(这是一个list,包含所有的row指针)
+             }
+             delete tmp.surfaceDateArr_r;
+             arr_ptr = tmp.surfaceDateArr_gr;
+             for(QSurfaceDataArray::iterator arr_it=arr_ptr->begin(); arr_it!=arr_ptr->end(); arr_it++){
+                 delete *arr_it; //释放dataarray(这是一个list,包含所有的row指针)
+             }
+             delete tmp.surfaceDateArr_gr;
+             arr_ptr = tmp.surfaceDateArr_gb;
+             for(QSurfaceDataArray::iterator arr_it=arr_ptr->begin(); arr_it!=arr_ptr->end(); arr_it++){
+                 delete *arr_it; //释放dataarray(这是一个list,包含所有的row指针)
+             }
+             delete tmp.surfaceDateArr_gb;
+             arr_ptr = tmp.surfaceDateArr_b;
+             for(QSurfaceDataArray::iterator arr_it=arr_ptr->begin(); arr_it!=arr_ptr->end(); arr_it++){
+                 delete *arr_it; //释放dataarray(这是一个list,包含所有的row指针)
+             }
+             delete tmp.surfaceDateArr_b;//释放list本身
+
+             it++;
+         }
     }
 }
 
@@ -268,6 +337,8 @@ void BLCDialog::onThreadDestroyed(QObject *obj)
     Q_UNUSED(obj);
     calcBLCthread->quit();
     calcBLCthread->wait();
+    showOnSreenSeries.dataProxy()->resetArray(NULL);
+    threeDSurface->removeSeries(&showOnSreenSeries);
 }
 
 void BLCDialog::onSaveXmlButton()
