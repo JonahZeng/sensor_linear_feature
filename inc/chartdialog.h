@@ -11,7 +11,7 @@
 #include <QLineEdit>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QScatterSeries>
-#include "chartview.h"
+#include "inc/chartview.h"
 #include "Python.h"
 #include <QCheckBox>
 
