@@ -1,4 +1,4 @@
-﻿#include "inc/calcblcthread.h"
+#include "inc/calcblcthread.h"
 #include "numpy/arrayobject.h"
 #include <QFile>
 
@@ -150,7 +150,7 @@ void calcBlcThread::run()
             surface_data_4_p.surfaceDateArr_gb = new QSurfaceDataArray;
             surface_data_4_p.surfaceDateArr_b = new QSurfaceDataArray;
             for(quint32 row=0; row<savgol_r_order0->dimensions[0]; row++){
-                QSurfaceDataRow* row_p_r = new QSurfaceDataRow(savgol_r_order0->dimensions[1]);//申请column个3d point vector
+                QSurfaceDataRow* row_p_r = new QSurfaceDataRow(savgol_r_order0->dimensions[1]);//申请column个3d point vector, row上下要颠倒
                 for(quint32 col=0; col<savgol_r_order0->dimensions[1]; col++){
                     (*row_p_r)[col].setPosition(QVector3D(col, ((qreal*)(savgol_r_order0->data))[row*savgol_r_order0->dimensions[1]+col], row));
                 }
@@ -177,8 +177,8 @@ void calcBlcThread::run()
                 }
                 surface_data_4_p.surfaceDateArr_b->append(row_p_b);
             }
-            if(!pSurfaceDataMap->contains(ae_gain))
-                (*pSurfaceDataMap)[ae_gain] = surface_data_4_p;
+            if(!pSurfaceDataMap->contains(ae_gain*50))
+                (*pSurfaceDataMap)[ae_gain*50] = surface_data_4_p;
 
             stored_ae_gain.append(ae_gain);
             dataIdx++;
@@ -224,48 +224,48 @@ void calcBlcThread::addRaw2FourChannel(quint8 *raw_buf, qreal *r_ch, qreal *gr_c
     qint32 width = rawSize.width();
     qint32 height = rawSize.height();
     switch(bayerMode){
-    case rawinfoDialog::RG:
-        for(qint32 row=0; row<height; row+=2){
-            for(qint32 col=0; col<width; col+=2){
-                r_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
-                gr_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
-                gb_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*(width+1)+col]:raw_buf[row*(width+1)+col];
-                b_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*(width+1)+col+1]:raw_buf[row*(width+1)+col+1];
+        case rawinfoDialog::RG:
+            for(qint32 row=0; row<height; row+=2){
+                for(qint32 col=0; col<width; col+=2){
+                    r_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
+                    gr_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
+                    gb_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col]:raw_buf[(row+1)*width+col];
+                    b_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col+1]:raw_buf[(row+1)*width+col+1];
+                }
             }
-        }
-        break;
-    case rawinfoDialog::GR:
-        for(qint32 row=0; row<height; row+=2){
-            for(qint32 col=0; col<width; col+=2){
-                gr_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
-                r_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
-                b_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*(width+1)+col]:raw_buf[row*(width+1)+col];
-                gb_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*(width+1)+col+1]:raw_buf[row*(width+1)+col+1];
+            break;
+        case rawinfoDialog::GR:
+            for(qint32 row=0; row<height; row+=2){
+                for(qint32 col=0; col<width; col+=2){
+                    gr_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
+                    r_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
+                    b_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col]:raw_buf[(row+1)*width+col];
+                    gb_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col+1]:raw_buf[(row+1)*width+col+1];
+                }
             }
-        }
-        break;
-    case rawinfoDialog::GB:
-        for(qint32 row=0; row<height; row+=2){
-            for(qint32 col=0; col<width; col+=2){
-                gb_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
-                b_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
-                r_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*(width+1)+col]:raw_buf[row*(width+1)+col];
-                gr_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*(width+1)+col+1]:raw_buf[row*(width+1)+col+1];
+            break;
+        case rawinfoDialog::GB:
+            for(qint32 row=0; row<height; row+=2){
+                for(qint32 col=0; col<width; col+=2){
+                    gb_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
+                    b_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
+                    r_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col]:raw_buf[(row+1)*width+col];
+                    gr_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col+1]:raw_buf[(row+1)*width+col+1];
+                }
             }
-        }
-        break;
-    case rawinfoDialog::BG:
-        for(qint32 row=0; row<height; row+=2){
-            for(qint32 col=0; col<width; col+=2){
-                b_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
-                gb_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
-                gr_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*(width+1)+col]:raw_buf[row*(width+1)+col];
-                r_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*(width+1)+col+1]:raw_buf[row*(width+1)+col+1];
+            break;
+        case rawinfoDialog::BG:
+            for(qint32 row=0; row<height; row+=2){
+                for(qint32 col=0; col<width; col+=2){
+                    b_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
+                    gb_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
+                    gr_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col]:raw_buf[(row+1)*width+col];
+                    r_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col+1]:raw_buf[(row+1)*width+col+1];
+                }
             }
-        }
-        break;
-    default:
-        break;
+            break;
+        default:
+            break;
     }
 }
 
@@ -284,7 +284,7 @@ quint16 calcBlcThread::avgBlcValueBE(qreal *savgol_result, qint64 len)
     for(qint64 idx=0; idx<len; idx++){
         sum += savgol_result[idx];
     }
-    Q_ASSERT(sum>0 && len>0);
+    Q_ASSERT(sum>=0 && len>0);
     return quint16((sum/len)+0.5);
 }
 
@@ -296,7 +296,7 @@ void calcBlcThread::calGridValue(qreal *savgol_result, qint64 total_row, qint64 
         for(quint8 k=0; k<11; k++){
             qint64 row = j==10?(j*total_row/10)-1:(j*total_row/10);
             qint64 col = k==10?(k*total_col/10)-1:(k*total_col/10);
-            grid11_11[j*11+k] = savgol_result[row*total_col+col];
+            grid11_11[j*11+k] = (quint16)(savgol_result[row*total_col+col] + 0.5); //qreal ---> quint16
         }
     }
 }
