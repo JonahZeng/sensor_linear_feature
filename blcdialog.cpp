@@ -1,8 +1,10 @@
-﻿#if _MSC_VER > 1600
+#if _MSC_VER > 1600
 #pragma execution_character_set("utf-8")  //fuck MSVC complior, use UTF-8, not gb2312/gbk
 #endif
 
+#include "inc/blcdialog.h"
 #include <QVBoxLayout>
+#include <QGridLayout>
 #include <QFileInfo>
 #include <QPainter>
 #include <QPaintEvent>
@@ -10,9 +12,13 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QScrollBar>
-#include "inc/blcdialog.h"
 #include <QtDataVisualization/QValue3DAxis>
-//#include <QDebug>
+#include <QDebug>
+
+const int SELECT_R = 1;
+const int SELECT_GR = 2;
+const int SELECT_GB = 3;
+const int SELECT_B = 4;
 
 BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, rawinfoDialog::bayerMode bm, QSize rawsz, quint16 bd) :
     QDialog(parent),
@@ -49,8 +55,11 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
     threeDSurface(new Q3DSurface),
     surfaceContainerWgt(QWidget::createWindowContainer(threeDSurface)),
     aeGain_surfaceData_4p_map(),
-    showOnSreenSeries(new QSurface3DSeries)
+    showOnSreenSeries(new QSurface3DSeries),
+    showOnScreenDataArr(new QSurfaceDataArray)
 {
+    resize(1024, 600);
+    setWindowTitle(tr("BLC tool"));
     if(!threeDSurface->hasContext()){
         QMessageBox::critical(this, tr("error"), tr("init opengl fail..."), QMessageBox::Ok);
     }
@@ -60,7 +69,6 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
 
     blcDataEdit->setWordWrapMode(QTextOption::NoWrap);
     blcDataEdit->setCenterOnScroll(true);
-    resize(1024, 600);
     hlayout->setSpacing(6);
     hlayout->setContentsMargins(11,11,11,11);
 
@@ -81,8 +89,10 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
             child->setText(0, fn);
             child->setToolTip(0, fn);
             item->addChild(child);
-            if(it==blc_fn_map.begin() && str_it==rawList.begin())
+            if(it==blc_fn_map.begin() && str_it==rawList.begin()){
                 child->setSelected(true);//默认选中第一个raw
+                iso = (quint16)(it.key());
+            }
             else
                 child->setSelected(false);
         }
@@ -91,63 +101,18 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
     treeWgt->expandAll();
     treeWgt->setFocusPolicy(Qt::ClickFocus);
 
-    QVBoxLayout* leftVerLayout = new QVBoxLayout;
-    leftVerLayout->addWidget(useTip, 1, Qt::AlignHCenter|Qt::AlignVCenter);
-    leftVerLayout->addWidget(treeWgt, 1);
-    //leftVerLayout->addStretch(1);
-    QVBoxLayout* boxLayout = new QVBoxLayout;
-    boxLayout->setContentsMargins(7,7,7,7);
-    boxLayout->addWidget(noGrid, 1, Qt::AlignVCenter|Qt::AlignLeft);
-    boxLayout->addWidget(grid5_5, 1, Qt::AlignVCenter|Qt::AlignLeft);
-    boxLayout->addWidget(grid11_11, 1, Qt::AlignVCenter|Qt::AlignLeft);
-    grid_box->setLayout(boxLayout);
-    leftVerLayout->addWidget(grid_box, 0, Qt::AlignHCenter|Qt::AlignVCenter);
-
-    hlayout->addLayout(leftVerLayout);
-
-    QVBoxLayout* bayerVerLayout = new QVBoxLayout;//设置3d surface bayer选项radiobutton排列
-    QGroupBox* surfaceBox = new QGroupBox(tr("显示"));
-    surface_r = new QRadioButton(tr("R"));
-    surface_gr = new QRadioButton(tr("Gr"));
-    surface_gb = new QRadioButton(tr("Gb"));
-    surface_b = new QRadioButton(tr("B"));
-    bayerVerLayout->addWidget(surface_r);
-    bayerVerLayout->addWidget(surface_gr);
-    bayerVerLayout->addWidget(surface_gb);
-    bayerVerLayout->addWidget(surface_b);
-    surfaceBox->setLayout(bayerVerLayout);
-    surface_r->setChecked(true);
-    surface_gr->setChecked(false);
-    surface_gb->setChecked(false);
-    surface_b->setChecked(false);
-
-    QHBoxLayout* surfaceAreaLayout = new QHBoxLayout;//设置3d surface整块区域水平layout
-    surfaceAreaLayout->addWidget(surfaceContainerWgt, 1);
-    surfaceAreaLayout->addWidget(surfaceBox);
-
-    imgView->setFrameStyle(QFrame::Box);
-    imgView->setScaledContents(true);
-
-    QVBoxLayout* middleLayout = new QVBoxLayout;
-    middleLayout->addWidget(imgView, 1);
-    middleLayout->addLayout(surfaceAreaLayout, 1);
-    hlayout->addLayout(middleLayout, 1); //设置中间包括img显示部分，和3d suface显示部分的layout
-
-    QVBoxLayout* rightVerLayout = new QVBoxLayout;
-    rightVerLayout->addWidget(blcDataEdit, 1);
-    QHBoxLayout* buttonLayout = new QHBoxLayout;
-    buttonLayout->addWidget(saveXml, 1);
-    buttonLayout->addWidget(saveAsXml, 1);
-    buttonLayout->addStretch(2);
-    rightVerLayout->addLayout(buttonLayout);
-    hlayout->addLayout(rightVerLayout, 1);
+    setLeftUI();
+    setMiddleUI();
+    yMinSpinBox->setBro(yMaxSpinBox);
+    yMaxSpinBox->setBro(yMinSpinBox);
+    setRightUI();
+    setLayout(hlayout);
+    threeDSurface->setSelectionMode(QAbstract3DGraph::SelectionNone);
 
     QDomProcessingInstruction insturction = xmlDoc->createProcessingInstruction("xml", "version='1.0' encoding='utf-8'");
     xmlDoc->appendChild(insturction);
     docRoot = xmlDoc->createElement("module_calibration");
     xmlDoc->appendChild(docRoot);
-
-    setLayout(hlayout);
 
     qint32 curSeletISO = blc_fn_map.firstKey();
     QString curRawFn = blc_fn_map[curSeletISO].at(0);
@@ -155,15 +120,26 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
     grid11_11->setChecked(true);//default 11x11
     grid5_5->setEnabled(false); //close 5x5
     showRawFile(curRawFn);
-    setWindowTitle(tr("BLC tool"));
 
     connect(treeWgt, &QTreeWidget::itemDoubleClicked, this, &BLCDialog::onTreeItemDoubleClicked);
     connect(noGrid, &QRadioButton::toggled, this, &BLCDialog::onNoGridToggled);
     connect(grid5_5, &QRadioButton::toggled, this, &BLCDialog::onGrid5_5_Toggled);
     connect(grid11_11, &QRadioButton::toggled, this, &BLCDialog::onGrid11_11_Toggled);
+    connect(surface_r, &QRadioButton::toggled, this, &BLCDialog::onSurface_r_Toggled);//切换3d 显示bayer channel
+    connect(surface_gr, &QRadioButton::toggled, this, &BLCDialog::onSurface_gr_Toggled);//切换3d 显示bayer channel
+    connect(surface_gb, &QRadioButton::toggled, this, &BLCDialog::onSurface_gb_Toggled);//切换3d 显示bayer channel
+    connect(surface_b, &QRadioButton::toggled, this, &BLCDialog::onSurface_b_Toggled);//切换3d 显示bayer channel
+    connect(selection_no, &QRadioButton::toggled, this, &BLCDialog::onSelectionNoItem);
+    connect(selection_item, &QRadioButton::toggled, this, &BLCDialog::onSelectionSingelItem);
+    connect(selection_row, &QRadioButton::toggled, this, &BLCDialog::onSelectionRow);
+    connect(selection_col, &QRadioButton::toggled, this, &BLCDialog::onSelectionColumn);
+    connect(themeList, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &BLCDialog::onThemeListIdxChanged);
+    connect(yMinSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &BLCDialog::onYminValueChanged);
+    connect(yMaxSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &BLCDialog::onYmaxValueChanged);
     connect(saveXml, &QPushButton::clicked, this, &BLCDialog::onSaveXmlButton);
     connect(saveAsXml, &QPushButton::clicked, this, &BLCDialog::onSaveAsButton);
     connect(blcDataEdit->document(), &QTextDocument::contentsChanged, this, &BLCDialog::onContextChanged);
+
 
 
     int totalTasks = 0;
@@ -178,7 +154,7 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
     connect(calcBLCthread, &calcBlcThread::currentTaskId, clacBLCprogress, &CalcBlcProgressDlg::handleCurrentTaskId);
     connect(calcBLCthread, &calcBlcThread::pyInitFail, clacBLCprogress, &CalcBlcProgressDlg::reject);//如果Py初始化失败，则进度对话框关闭并导致显示错误信息
     connect(calcBLCthread, &calcBlcThread::destroyed, this, &BLCDialog::onThreadDestroyed);
-    //connect(calcBLCthread, &calcBlcThread::finished, calcBLCthread, &QObject::deleteLater); 这里暂时不用，设置在对话框关闭时退出线程
+    //connect(calcBLCthread, &calcBlcThread::finished, calcBLCthread, &QObject::deleteLater); //这里暂时不用，设置在对话框关闭时退出线程
     calcBLCthread->start();
 
     if(clacBLCprogress->exec()==CalcBlcProgressDlg::Accepted){
@@ -186,15 +162,24 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
         QTextStream xmlOutStream(&showXmlDoc, QIODevice::WriteOnly);
         xmlDoc->save(xmlOutStream, 4);
         blcDataEdit->setPlainText(showXmlDoc);
-        xmlHL = new BlcXmlHighlight(blcDataEdit->document());
+        xmlHL = new BlcXmlHighlight(blcDataEdit->document());//渲染xml高亮
 
-        showOnSreenSeries.dataProxy()->resetArray(aeGain_surfaceData_4p_map.first().surfaceDateArr_r);//暂时显示第一个r
-        threeDSurface->addSeries(&showOnSreenSeries);
-        threeDSurface->show();
+        //QSurfaceDataArray showOnScreenDataArr;
+        if(deepCopyDataArray(showOnScreenDataArr, aeGain_surfaceData_4p_map, this->iso, SELECT_R)){
+            showOnSreenSeries.dataProxy()->resetArray(showOnScreenDataArr);
+            showOnSreenSeries.setDrawMode(QSurface3DSeries::DrawSurface);
+            threeDSurface->addSeries(&showOnSreenSeries);
+            threeDSurface->axisZ()->setReversed(true);//row颠倒
+            yMaxSpinBox->setValue(threeDSurface->axisY()->max()-1);
+            yMinSpinBox->setValue(threeDSurface->axisY()->min()+1);
+            threeDSurface->show();
+        }
     }
     else{
         blcDataEdit->setPlainText(tr("计算出错，请检查环境配置、raw文件和输入信息是否匹配"));
         threeDSurface->hide();
+        yMaxSpinBox->setValue(0);
+        yMinSpinBox->setValue(1);
     }
 }
 
@@ -207,28 +192,36 @@ BLCDialog::~BLCDialog()
     if(!(xmlDoc->isNull())){
         delete xmlDoc;
     }
+    // showOnSreenSeries自身析构，series->dataproxy析构dataarray,不用主动释放data
+    /*if(showOnScreenDataArr!=NULL){
+        while(showOnScreenDataArr->size()!=0){
+            delete showOnScreenDataArr->takeFirst();
+        }
+        delete showOnScreenDataArr;
+        showOnScreenDataArr = NULL;
+    }*/
     if(aeGain_surfaceData_4p_map.size()>0){
          QMap<quint16, SurfaceDateArrP_4>::iterator it=aeGain_surfaceData_4p_map.begin();
          while(it!=aeGain_surfaceData_4p_map.end()){
              SurfaceDateArrP_4 tmp = it.value();
              QSurfaceDataArray* arr_ptr = tmp.surfaceDateArr_r;
-             for(QSurfaceDataArray::iterator arr_it=arr_ptr->begin(); arr_it!=arr_ptr->end(); arr_it++){
-                 delete *arr_it; //释放dataarray(这是一个list,包含所有的row指针)
+             while(arr_ptr->size()!=0){
+                 delete arr_ptr->takeFirst();
              }
              delete tmp.surfaceDateArr_r;
              arr_ptr = tmp.surfaceDateArr_gr;
-             for(QSurfaceDataArray::iterator arr_it=arr_ptr->begin(); arr_it!=arr_ptr->end(); arr_it++){
-                 delete *arr_it; //释放dataarray(这是一个list,包含所有的row指针)
+             while(arr_ptr->size()!=0){
+                 delete arr_ptr->takeFirst();
              }
              delete tmp.surfaceDateArr_gr;
              arr_ptr = tmp.surfaceDateArr_gb;
-             for(QSurfaceDataArray::iterator arr_it=arr_ptr->begin(); arr_it!=arr_ptr->end(); arr_it++){
-                 delete *arr_it; //释放dataarray(这是一个list,包含所有的row指针)
+             while(arr_ptr->size()!=0){
+                 delete arr_ptr->takeFirst();
              }
              delete tmp.surfaceDateArr_gb;
              arr_ptr = tmp.surfaceDateArr_b;
-             for(QSurfaceDataArray::iterator arr_it=arr_ptr->begin(); arr_it!=arr_ptr->end(); arr_it++){
-                 delete *arr_it; //释放dataarray(这是一个list,包含所有的row指针)
+             while(arr_ptr->size()!=0){
+                 delete arr_ptr->takeFirst();
              }
              delete tmp.surfaceDateArr_b;//释放list本身
 
@@ -245,6 +238,7 @@ void BLCDialog::onTreeItemDoubleClicked(QTreeWidgetItem *item, int column)
         QString clicked_real_file;
         QString rootText  = item->parent()->text(column);
         qint32 iso = rootText.right(rootText.size()-3).toInt();//ISO100 排除掉ISO三个字符，拿到整数值
+        this->iso = iso;
         QStringList specificISO_fn = blc_fn_map[iso];
         for(QStringList::iterator it = specificISO_fn.begin(); it!=specificISO_fn.end(); it++){
             QFileInfo finfo(*it);
@@ -265,9 +259,29 @@ void BLCDialog::onTreeItemDoubleClicked(QTreeWidgetItem *item, int column)
         if(!txtCsr.isNull())
             blcDataEdit->setTextCursor(txtCsr);
 
-        //int curpos = blcDataEdit->verticalScrollBar()->value();
-        //blcDataEdit->verticalScrollBar()->setValue(curpos+blcDataEdit->verticalScrollBar()->pageStep());
-
+        if(threeDSurface->isVisible()){
+            int bayerSelected;
+            if(surface_r->isChecked()){
+                bayerSelected = SELECT_R;
+            }
+            else if(surface_gr->isChecked()){
+                bayerSelected = SELECT_GR;
+            }
+            else if(surface_gb->isChecked()){
+                bayerSelected = SELECT_GB;
+            }
+            else if(surface_b->isChecked()){
+                bayerSelected = SELECT_B;
+            }
+            else
+                bayerSelected = -1;
+            if(deepCopyDataArray(showOnScreenDataArr, aeGain_surfaceData_4p_map, this->iso, bayerSelected)){
+                threeDSurface->seriesList().at(0)->dataProxy()->resetArray(showOnScreenDataArr);
+                threeDSurface->axisY()->setAutoAdjustRange(true);
+                yMaxSpinBox->setValue(threeDSurface->axisY()->max());
+                yMinSpinBox->setValue(threeDSurface->axisY()->min());
+            }
+        }
     }
 }
 
@@ -310,6 +324,197 @@ void BLCDialog::showRawFile(const QString &rawfileName)
     imgView->setShowImage(&showIm);
 }
 
+
+/* ---------------------------------------------------------------------
+ *  dst作为目标指针，根据iso和r/gr/gb/b选项决定拷贝数据
+ *  调用这个函数需要保证dst指向一个QSrufaceDataArray对象，不可为null
+ *
+ *  如果dst本身已存在data数据，则被覆盖，如果无数据或者row不够，则从堆上new
+ *  Q3DSurface负责最后的销毁
+ *--------------------------------------------------------------------*/
+bool BLCDialog::deepCopyDataArray(QSurfaceDataArray *dst, const QMap<quint16, SurfaceDateArrP_4> &src_map, quint16 iso, int selectBayer)
+{
+    /*QList<QTreeWidgetItem*> curSeletedList = treeWgt->selectedItems();
+    if(curSeletedList.size()!=1)
+        return false;
+
+
+    QTreeWidgetItem* parentIsoItem = curSeletedList.at(0)->parent();
+    if(parentIsoItem==NULL)
+        return false;
+    QString iso_str = parentIsoItem->text(0).right(parentIsoItem->text(0).length()-3);
+    bool flag = false;
+    qint32 iso = iso_str.toInt(&flag, 10);
+    if(flag == false)
+        return false;*/
+    if(selectBayer<0 || selectBayer >4)
+        return false;
+    if(dst==NULL || src_map.size()==0)
+        return false;
+    if(!src_map.contains(iso))
+        return false;
+
+    QSurfaceDataArray* pData;
+    switch(selectBayer){
+        case(SELECT_R):
+            pData = src_map[iso].surfaceDateArr_r;
+            break;
+        case(SELECT_GR):
+            pData = src_map[iso].surfaceDateArr_gr;
+            break;
+        case(SELECT_GB):
+            pData = src_map[iso].surfaceDateArr_gb;
+            break;
+        case(SELECT_B):
+            pData = src_map[iso].surfaceDateArr_b;
+            break;
+        default:
+            pData = NULL;
+            break;
+    }
+    if(pData==NULL)
+        return false;
+
+
+    if(dst->size()==pData->size()){//已存在row相等，则deep copy
+        for(QSurfaceDataArray::iterator it_dst=dst->begin(), it_src=pData->begin(); it_src!=pData->end(); it_dst++, it_src++){
+            *(*it_dst) = *(*it_src); //QVector<3dpoint> 复制，不是指针复制
+        }
+    }
+    else if(dst->size()<pData->size()){
+        QSurfaceDataArray::iterator it_dst=dst->begin();
+        QSurfaceDataArray::iterator it_src=pData->begin();
+        for(; it_dst!=dst->end(); it_dst++, it_src++){
+            *(*it_dst) = *(*it_src); //QVector<3dpoint> 复制，不是指针复制
+        }
+        while(it_src!=pData->end()){
+            QSurfaceDataRow* tmpRow = new QSurfaceDataRow;
+            *tmpRow = *(*it_src);
+            *dst << tmpRow;
+            it_src++;
+        }
+    }
+    else{
+        while(dst->size()>pData->size()){
+            QSurfaceDataRow* lastRow = dst->last();
+            if(lastRow!=NULL)
+                delete lastRow;
+            dst->removeLast();
+        }
+        Q_ASSERT(dst->size()==pData->size());
+        for(QSurfaceDataArray::iterator it_dst=dst->begin(), it_src=pData->begin(); it_src!=pData->end(); it_dst++, it_src++){
+            *(*it_dst) = *(*it_src); //QVector<3dpoint> 复制，不是指针复制
+        }
+    }
+    return true;
+}
+
+void BLCDialog::setLeftUI()
+{
+    QVBoxLayout* leftVerLayout = new QVBoxLayout;
+    leftVerLayout->addWidget(useTip, 1, Qt::AlignHCenter|Qt::AlignVCenter);
+    leftVerLayout->addWidget(treeWgt, 1);
+    QVBoxLayout* boxLayout = new QVBoxLayout;
+    boxLayout->setContentsMargins(7,7,7,7);
+    boxLayout->addWidget(noGrid, 1, Qt::AlignVCenter|Qt::AlignLeft);
+    boxLayout->addWidget(grid5_5, 1, Qt::AlignVCenter|Qt::AlignLeft);
+    boxLayout->addWidget(grid11_11, 1, Qt::AlignVCenter|Qt::AlignLeft);
+    grid_box->setLayout(boxLayout);
+    leftVerLayout->addWidget(grid_box, 0, Qt::AlignHCenter|Qt::AlignVCenter);
+
+    hlayout->addLayout(leftVerLayout);
+}
+
+void BLCDialog::setMiddleUI()
+{
+    QVBoxLayout* middleLayout = new QVBoxLayout;
+    QHBoxLayout* surfaceAreaLayout = new QHBoxLayout;//设置3d surface整块区域水平layout
+    QVBoxLayout* surfaceAreaRightLayout = new QVBoxLayout;
+//----------------------------------------------------
+    QGridLayout* bayerGridLayout = new QGridLayout;//设置3d surface bayer选项radiobutton排列
+    QGroupBox* surfaceBox = new QGroupBox(tr("选择bayer"));
+    surface_r = new QRadioButton(tr("R"));
+    surface_gr = new QRadioButton(tr("Gr"));
+    surface_gb = new QRadioButton(tr("Gb"));
+    surface_b = new QRadioButton(tr("B"));
+    bayerGridLayout->addWidget(surface_r, 0, 0, 1, 1);
+    bayerGridLayout->addWidget(surface_gr, 0, 1, 1, 1);
+    bayerGridLayout->addWidget(surface_gb, 1, 0, 1, 1);
+    bayerGridLayout->addWidget(surface_b, 1, 1, 1, 1);
+    surfaceBox->setLayout(bayerGridLayout);
+    surface_r->setChecked(true);
+    surface_gr->setChecked(false);
+    surface_gb->setChecked(false);
+    surface_b->setChecked(false);
+
+    QGridLayout* itemSeletionMode = new QGridLayout;
+    QGroupBox* seletionBox = new QGroupBox(tr("选定数据点显示"));
+    selection_no = new QRadioButton(tr("不显示"));
+    selection_item = new QRadioButton(tr("显示单个点"));
+    selection_row = new QRadioButton(tr("显示同一行"));
+    selection_col = new QRadioButton(tr("显示同一列"));
+    itemSeletionMode->addWidget(selection_no, 0, 0, 1, 1);
+    itemSeletionMode->addWidget(selection_item, 0, 1, 1, 1);
+    itemSeletionMode->addWidget(selection_row, 1, 0, 1, 1);
+    itemSeletionMode->addWidget(selection_col, 1, 1, 1, 1);
+    selection_no->setChecked(true);
+    seletionBox->setLayout(itemSeletionMode);
+
+    QHBoxLayout* surfaceThemelayout = new QHBoxLayout;
+    QLabel* themeLabel = new QLabel(tr("显示主题:"));
+    surfaceThemelayout->addWidget(themeLabel);
+    themeList = new QComboBox;
+    themeList->addItem(QStringLiteral("Qt"));
+    themeList->addItem(QStringLiteral("Primary Colors"));
+    themeList->addItem(QStringLiteral("Digia"));
+    themeList->addItem(QStringLiteral("Stone Moss"));
+    themeList->addItem(QStringLiteral("Army Blue"));
+    themeList->addItem(QStringLiteral("Retro"));
+    themeList->addItem(QStringLiteral("Ebony"));
+    themeList->addItem(QStringLiteral("Isabelle"));
+    themeList->setCurrentIndex(0);
+    surfaceThemelayout->addWidget(themeList);
+
+    QGridLayout* yAxisSettingLayout = new QGridLayout;
+    QLabel* yMin = new QLabel(tr("Y轴下限"));
+    QLabel* yMax = new QLabel(tr("Y轴上限"));
+    yMinSpinBox = new BlcSpinBox(nullptr, true);
+    yMaxSpinBox = new BlcSpinBox(nullptr, false);
+    yAxisSettingLayout->addWidget(yMin, 0, 0, 1, 1);
+    yAxisSettingLayout->addWidget(yMax, 0, 1, 1, 1);
+    yAxisSettingLayout->addWidget(yMinSpinBox, 1, 0, 1, 1);
+    yAxisSettingLayout->addWidget(yMaxSpinBox, 1, 1, 1, 1);
+    yMinSpinBox->setRange(-16384, 16383);
+    yMaxSpinBox->setRange(-16384, 16383);
+//----------------------------------------------------------------
+    surfaceAreaRightLayout->addWidget(surfaceBox);
+    surfaceAreaRightLayout->addWidget(seletionBox);
+    surfaceAreaRightLayout->addLayout(surfaceThemelayout);
+    surfaceAreaRightLayout->addLayout(yAxisSettingLayout);
+
+    surfaceAreaLayout->addWidget(surfaceContainerWgt, 1);
+    surfaceAreaLayout->addLayout(surfaceAreaRightLayout);
+
+    imgView->setFrameStyle(QFrame::Box);
+    imgView->setScaledContents(true);
+
+    middleLayout->addWidget(imgView, 1);
+    middleLayout->addLayout(surfaceAreaLayout, 1);
+    hlayout->addLayout(middleLayout, 1); //设置中间包括img显示部分，和3d suface显示部分的layout
+}
+
+void BLCDialog::setRightUI()
+{
+    QVBoxLayout* rightVerLayout = new QVBoxLayout;
+    rightVerLayout->addWidget(blcDataEdit, 1);
+    QHBoxLayout* buttonLayout = new QHBoxLayout;
+    buttonLayout->addWidget(saveXml, 1);
+    buttonLayout->addWidget(saveAsXml, 1);
+    buttonLayout->addStretch(2);
+    rightVerLayout->addLayout(buttonLayout);
+    hlayout->addLayout(rightVerLayout, 1);
+}
+
 void BLCDialog::onNoGridToggled(bool statu)
 {
     if(statu==true){
@@ -337,8 +542,6 @@ void BLCDialog::onThreadDestroyed(QObject *obj)
     Q_UNUSED(obj);
     calcBLCthread->quit();
     calcBLCthread->wait();
-    showOnSreenSeries.dataProxy()->resetArray(NULL);
-    threeDSurface->removeSeries(&showOnSreenSeries);
 }
 
 void BLCDialog::onSaveXmlButton()
@@ -402,6 +605,89 @@ void BLCDialog::onContextChanged()
     blcDataChanged = true;
 }
 
+void BLCDialog::onSurface_r_Toggled(bool statu)
+{
+    if(statu){
+        if(deepCopyDataArray(showOnScreenDataArr, aeGain_surfaceData_4p_map, this->iso, SELECT_R)){//内部判断哪个bayer channel被选中
+            threeDSurface->seriesList().at(0)->dataProxy()->resetArray(showOnScreenDataArr);
+            threeDSurface->axisY()->setAutoAdjustRange(true);
+            yMaxSpinBox->setValue(threeDSurface->axisY()->max());
+            yMinSpinBox->setValue(threeDSurface->axisY()->min());
+        }
+    }
+}
+
+void BLCDialog::onSurface_gr_Toggled(bool statu)
+{
+    if(statu){
+        if(deepCopyDataArray(showOnScreenDataArr, aeGain_surfaceData_4p_map, this->iso, SELECT_GR)){//内部判断哪个bayer channel被选中
+            threeDSurface->seriesList().at(0)->dataProxy()->resetArray(showOnScreenDataArr);
+            yMaxSpinBox->setValue(threeDSurface->axisY()->max());
+            yMinSpinBox->setValue(threeDSurface->axisY()->min());
+        }
+    }
+}
+
+void BLCDialog::onSurface_gb_Toggled(bool statu)
+{
+    if(statu){
+        if(deepCopyDataArray(showOnScreenDataArr, aeGain_surfaceData_4p_map, this->iso, SELECT_GB)){//内部判断哪个bayer channel被选中
+            threeDSurface->seriesList().at(0)->dataProxy()->resetArray(showOnScreenDataArr);
+            yMaxSpinBox->setValue(threeDSurface->axisY()->max());
+            yMinSpinBox->setValue(threeDSurface->axisY()->min());
+        }
+    }
+}
+
+void BLCDialog::onSurface_b_Toggled(bool statu)
+{
+    if(statu){
+        if(deepCopyDataArray(showOnScreenDataArr, aeGain_surfaceData_4p_map, this->iso, SELECT_B)){//内部判断哪个bayer channel被选中
+            threeDSurface->seriesList().at(0)->dataProxy()->resetArray(showOnScreenDataArr);
+            yMaxSpinBox->setValue(threeDSurface->axisY()->max());
+            yMinSpinBox->setValue(threeDSurface->axisY()->min());
+        }
+    }
+}
+
+void BLCDialog::onSelectionNoItem(bool statu)
+{
+    if(statu)
+        threeDSurface->setSelectionMode(QAbstract3DGraph::SelectionNone);
+}
+
+void BLCDialog::onSelectionSingelItem(bool statu)
+{
+    if(statu)
+        threeDSurface->setSelectionMode(QAbstract3DGraph::SelectionItem);
+}
+
+void BLCDialog::onSelectionRow(bool statu)
+{
+    if(statu)
+        threeDSurface->setSelectionMode(QAbstract3DGraph::SelectionItemAndRow|QAbstract3DGraph::SelectionSlice);
+}
+
+void BLCDialog::onSelectionColumn(bool statu)
+{
+    if(statu)
+        threeDSurface->setSelectionMode(QAbstract3DGraph::SelectionItemAndColumn|QAbstract3DGraph::SelectionSlice);
+}
+
+void BLCDialog::onThemeListIdxChanged(int idx)
+{
+    threeDSurface->activeTheme()->setType(Q3DTheme::Theme(idx));
+}
+
+void BLCDialog::onYminValueChanged(int val)
+{
+    threeDSurface->axisY()->setRange(val, yMaxSpinBox->value());
+}
+
+void BLCDialog::onYmaxValueChanged(int val)
+{
+    threeDSurface->axisY()->setRange(yMinSpinBox->value(), val);
+}
 
 //-------class gridImgLabel------------
 gridImgLabel::gridImgLabel(QWidget* parent, QString gridFlag, QPixmap* const img):
@@ -493,4 +779,37 @@ void gridImgLabel::paintEvent(QPaintEvent *e)
     p.restore();
     p.end();
     QLabel::paintEvent(e);
+}
+
+//------------------class spinbox----------------
+BlcSpinBox::BlcSpinBox(QWidget *parent, bool isMin):
+    QSpinBox(parent),
+    bro(NULL)
+{
+    this->isMin = isMin;
+    lineEdit()->setReadOnly(true);
+}
+
+void BlcSpinBox::stepBy(int steps)//reimplement stepBy, 用于在setValue之前做判断
+{
+    int min = this->minimum();
+    int max = this->maximum();
+    int old = this->value();
+    if((old+steps)>max || (old+steps)<min)
+        return;//do nothing
+    if(this->isMin){
+        if(bro==NULL)
+            return;
+        int end = this->bro->value();
+        if((end-old-steps)<1)
+            return;
+    }
+    else{
+        if(bro==NULL)
+            return;
+        int begin = this->bro->value();
+        if((old+steps-begin)<1)
+            return;
+    }
+    QAbstractSpinBox::stepBy(steps);
 }
