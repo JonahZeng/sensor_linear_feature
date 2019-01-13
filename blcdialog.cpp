@@ -1,4 +1,4 @@
-#if _MSC_VER > 1600
+﻿#if _MSC_VER > 1600
 #pragma execution_character_set("utf-8")  //fuck MSVC complior, use UTF-8, not gb2312/gbk
 #endif
 
@@ -134,6 +134,8 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
     connect(selection_row, &QRadioButton::toggled, this, &BLCDialog::onSelectionRow);
     connect(selection_col, &QRadioButton::toggled, this, &BLCDialog::onSelectionColumn);
     connect(themeList, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &BLCDialog::onThemeListIdxChanged);
+    connect(GYRM, &QPushButton::clicked, this, &BLCDialog::onColorGradientGYRM);
+    connect(BMRY, &QPushButton::clicked, this, &BLCDialog::onColorGradientBMRY);
     connect(yMinSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &BLCDialog::onYminValueChanged);
     connect(yMaxSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &BLCDialog::onYmaxValueChanged);
     connect(saveXml, &QPushButton::clicked, this, &BLCDialog::onSaveXmlButton);
@@ -475,6 +477,37 @@ void BLCDialog::setMiddleUI()
     themeList->setCurrentIndex(0);
     surfaceThemelayout->addWidget(themeList);
 
+    QHBoxLayout* colorGriadentLayout = new QHBoxLayout;
+    GYRM = new QPushButton;
+    QLinearGradient gyrm(0, 0, 50, 1);
+    gyrm.setColorAt(1.0, Qt::magenta);
+    gyrm.setColorAt(0.67, Qt::red);
+    gyrm.setColorAt(0.33, Qt::yellow);
+    gyrm.setColorAt(0.0, Qt::green);
+    QPixmap pm1(50, 20);
+    QPainter pmp1(&pm1);
+    pmp1.setBrush(QBrush(gyrm));
+    pmp1.setPen(Qt::NoPen);
+    pmp1.drawRect(0, 0, 50, 20);
+    GYRM->setIcon(QIcon(pm1));
+    GYRM->setIconSize(QSize(50, 20));
+
+    BMRY = new QPushButton;
+    QLinearGradient bmry(0, 0, 50, 1);
+    bmry.setColorAt(1.0, Qt::yellow);
+    bmry.setColorAt(0.67, Qt::red);
+    bmry.setColorAt(0.33, Qt::magenta);
+    bmry.setColorAt(0.0, Qt::blue);
+    QPixmap pm(50, 20);
+    QPainter pmp(&pm);
+    pmp.setBrush(QBrush(bmry));
+    pmp.setPen(Qt::NoPen);
+    pmp.drawRect(0, 0, 50, 20);
+    BMRY->setIcon(QIcon(pm));
+    BMRY->setIconSize(QSize(50, 20));
+    colorGriadentLayout->addWidget(GYRM);
+    colorGriadentLayout->addWidget(BMRY);
+
     QGridLayout* yAxisSettingLayout = new QGridLayout;
     QLabel* yMin = new QLabel(tr("Y轴下限"));
     QLabel* yMax = new QLabel(tr("Y轴上限"));
@@ -490,6 +523,7 @@ void BLCDialog::setMiddleUI()
     surfaceAreaRightLayout->addWidget(surfaceBox);
     surfaceAreaRightLayout->addWidget(seletionBox);
     surfaceAreaRightLayout->addLayout(surfaceThemelayout);
+    surfaceAreaRightLayout->addLayout(colorGriadentLayout);
     surfaceAreaRightLayout->addLayout(yAxisSettingLayout);
 
     surfaceAreaLayout->addWidget(surfaceContainerWgt, 1);
@@ -689,6 +723,30 @@ void BLCDialog::onYmaxValueChanged(int val)
     threeDSurface->axisY()->setRange(yMinSpinBox->value(), val);
 }
 
+void BLCDialog::onColorGradientGYRM()
+{
+    QLinearGradient gyrm;
+    gyrm.setColorAt(1.0, Qt::magenta);
+    gyrm.setColorAt(0.67, Qt::red);
+    gyrm.setColorAt(0.33, Qt::yellow);
+    gyrm.setColorAt(0.0, Qt::green);
+
+    threeDSurface->seriesList().at(0)->setBaseGradient(gyrm);
+    threeDSurface->seriesList().at(0)->setColorStyle(Q3DTheme::ColorStyleRangeGradient);
+}
+
+void BLCDialog::onColorGradientBMRY()
+{
+    QLinearGradient bmry;
+    bmry.setColorAt(1.0, Qt::yellow);
+    bmry.setColorAt(0.67, Qt::red);
+    bmry.setColorAt(0.33, Qt::magenta);
+    bmry.setColorAt(0.0, Qt::blue);
+
+    threeDSurface->seriesList().at(0)->setBaseGradient(bmry);
+    threeDSurface->seriesList().at(0)->setColorStyle(Q3DTheme::ColorStyleRangeGradient);
+}
+
 //-------class gridImgLabel------------
 gridImgLabel::gridImgLabel(QWidget* parent, QString gridFlag, QPixmap* const img):
     QLabel(parent),
@@ -787,7 +845,7 @@ BlcSpinBox::BlcSpinBox(QWidget *parent, bool isMin):
     bro(NULL)
 {
     this->isMin = isMin;
-    lineEdit()->setReadOnly(true);
+    //lineEdit()->setReadOnly(true);
 }
 
 void BlcSpinBox::stepBy(int steps)//reimplement stepBy, 用于在setValue之前做判断

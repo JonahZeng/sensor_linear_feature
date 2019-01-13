@@ -1,4 +1,4 @@
-#include "inc\lineseries.h"
+﻿#include "inc\lineseries.h"
 #include <QDebug>
 
 LineSeries::LineSeries(QObject *parent):

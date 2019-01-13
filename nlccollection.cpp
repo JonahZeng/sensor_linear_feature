@@ -1,4 +1,4 @@
-#include "inc\nlccollection.h"
+﻿#include "inc\nlccollection.h"
 //#include <QDebug>
 #include <QFile>
 #include <QFileInfo>

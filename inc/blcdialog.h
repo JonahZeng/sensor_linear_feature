@@ -80,6 +80,8 @@ protected slots:
     void onThemeListIdxChanged(int idx);
     void onYminValueChanged(int val);
     void onYmaxValueChanged(int val);
+    void onColorGradientGYRM();
+    void onColorGradientBMRY();
 
 private:
     QLabel* useTip;
@@ -111,13 +113,13 @@ private:
     QWidget* surfaceContainerWgt;
     QRadioButton *surface_r, *surface_gr, *surface_gb, *surface_b;
     QRadioButton *selection_no, *selection_item, *selection_row, *selection_col;
+    QComboBox *themeList;
+    QPushButton *GYRM, *BMRY;
     BlcSpinBox *yMinSpinBox, *yMaxSpinBox;
     QMap<quint16, SurfaceDateArrP_4> aeGain_surfaceData_4p_map;
 
     QSurface3DSeries showOnSreenSeries;
     QSurfaceDataArray* showOnScreenDataArr;
-
-    QComboBox *themeList;
 
 
 private:

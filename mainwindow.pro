@@ -70,11 +70,11 @@ FORMS += \
         #E:\yqzeng\opencv3\build_x64\x64\vc15\lib\opencv_imgproc341d.lib \
 
 
-INCLUDEPATH +=  C:\python36\include \
-        C:\python36\Lib\site-packages\numpy\core\include
+INCLUDEPATH +=  C:\python35\include \
+        C:\python35\Lib\site-packages\numpy\core\include
 #       D:\opencv3-4-1\build\include \
 
-LIBS += C:\python36\libs\python36.lib
+LIBS += C:\python35\libs\python35.lib
 #        D:\opencv3-4-1\build\x64\vc14\lib\opencv_core343.lib \
 #        D:\opencv3-4-1\build\x64\vc14\lib\opencv_imgproc343.lib
 
