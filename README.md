@@ -14,9 +14,11 @@
 ![open_menu](https://raw.githubusercontent.com/JonahZeng/sensor_linear_feature/master/image/open_menu0.png)
 
 这个菜单用于打开BLC&NLC raw文件，弹出子功能对话框；
+
 ![edit_menu](https://raw.githubusercontent.com/JonahZeng/sensor_linear_feature/master/image/open_menu.png)
 
 edit菜单用于控制图片显示缩放；
+
 ![edit_menu](https://raw.githubusercontent.com/JonahZeng/sensor_linear_feature/master/image/about_menu.png)
 
 在关于菜单中，可以查看Qt版本信息和一些注意事项；
