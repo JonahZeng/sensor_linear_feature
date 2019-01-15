@@ -1,4 +1,4 @@
-﻿#if _MSC_VER > 1600
+#if _MSC_VER > 1600
 #pragma execution_character_set("utf-8")  //fuck MSVC complior, use UTF-8, not gb2312/gbk
 #endif
 
@@ -325,6 +325,18 @@ void calcBlcThread::createBlcDateNode(quint8 order,
         ae_gain.appendChild(ae_gain_val);
         data.appendChild(ae_gain);
 
+        QString fpn_str;
+        for(int row=0; row<16; row++){
+            char buf[43] = {'\0'};
+            sprintf(buf, row==15?"\n        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n":"\n        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,");
+            fpn_str.append(buf);
+        }
+        fpn_str.append("        ");
+        QDomElement fpn_array = xmlDoc->createElement("fpn_fixed_arr");
+        QDomText fpn_arr_val = xmlDoc->createTextNode(fpn_str);
+        fpn_array.appendChild(fpn_arr_val);
+        data.appendChild(fpn_array);
+
         QDomElement r_offset = xmlDoc->createElement("blc_r_offset_be");
         QDomText r_offset_data = xmlDoc->createTextNode(QString::number(R_blc_be, 10));
         r_offset.appendChild(r_offset_data);
@@ -440,3 +452,4 @@ void calcBlcThread::createBlcDateNode(quint8 order,
         docRoot.appendChild(data);
     }
 }
+
