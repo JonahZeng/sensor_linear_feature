@@ -1,8 +1,11 @@
-﻿#if _MSC_VER > 1600
+#if _MSC_VER > 1600
 #pragma execution_character_set("utf-8")  //fuck MSVC complior, use UTF-8, not gb2312/gbk
 #endif
 
 //#define USE_OPENCV_DEMOSAIC
+#ifdef USE_OPENCV_DEMOSAIC
+#include "opencv2/opencv.hpp"
+#endif
 
 #include "inc/mainwindow.h"
 #include "ui_mainwindow.h"
@@ -17,10 +20,10 @@
 #include <QMap>
 #include "inc/chartdialog.h"
 #include "inc/blcdialog.h"
-
-#ifdef USE_OPENCV_DEMOSAIC
-#include "opencv2/opencv.hpp"
-#endif
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QJsonValue>
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -42,6 +45,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->scrollArea->setWidget(imgLabel);
     //ui->scrollArea->setWidgetResizable(true);
+    imgLabel->resize(300, 100);
 
     ui->actionOpenNLC->setShortcut(QKeySequence(tr("Ctrl+N")));//设置快捷键
     ui->actionOpenNLC->setStatusTip(tr("open NLC raw files..."));
@@ -118,8 +122,13 @@ void MainWindow::onNextButton()
 
 void MainWindow::onFinishButton()
 {
-    if(nlc_vec.isEmpty()){
-        QMessageBox::critical(this, tr("error"), tr("no raw inputed !"), QMessageBox::Ok);
+//    if(nlc_vec.isEmpty()){
+//        QMessageBox::critical(this, tr("error"), tr("no raw inputed !"), QMessageBox::Ok);
+//        return;
+//    }
+    QVector<nlccollection>::size_type nlc_size = nlc_vec.size();
+    if(nlc_size<=6){
+        QMessageBox::warning(this, tr("warning"), tr("at least 6 raw is needed."), QMessageBox::Ok);
         return;
     }
     for(QVector<nlccollection>::size_type idx = 0; idx<nlc_vec.size(); idx++){
@@ -145,11 +154,7 @@ void MainWindow::onFinishButton()
         }
     }
 
-    QVector<nlccollection>::size_type nlc_size = nlc_vec.size();
-    if(nlc_size<=6){
-        QMessageBox::warning(this, tr("warning"), tr("at least 6 raw is needed."), QMessageBox::Ok);
-        return;
-    }
+
     QVector<QPointF> lineR(nlc_size);
     QVector<QPointF> lineGr(nlc_size);
     QVector<QPointF> lineGb(nlc_size);
@@ -196,7 +201,7 @@ void MainWindow::recieveRoi(const ROI_t &roi)
 {
     if(nlc_vec.isEmpty() || curRawIdx>=nlc_vec.size())
         return;
-    ROI_t r = {roi.left*2, roi.right*2, roi.top*2, roi.bottom*2};//放大2倍到实际值
+    ROI_t r = {roi.left*2, roi.right*2, roi.top*2, roi.bottom*2};//放大2倍到实际值 因为显示的图像是downscale 1/2的
     nlc_vec[curRawIdx].setRoi(r);
     QTableWidgetItem* item3 = ui->tableWidget->item(curRawIdx, 3);//roi 显示在第三列
     if(item3==NULL){
@@ -215,12 +220,9 @@ void MainWindow::on_actionAbout_this_App_triggered()
     if(aboutThisApp == NULL){
         aboutThisApp = new AboutDialog(this);
         aboutThisApp->setWindowTitle(tr("about this app"));
-        aboutThisApp->exec();
+        //aboutThisApp->exec();
     }
-    else{
-        aboutThisApp->exec();
-    }
-
+    aboutThisApp->exec();
 }
 
 void MainWindow::on_actionOpenNLC_triggered()
@@ -359,7 +361,38 @@ void MainWindow::on_actionAbout_Qt_triggered()
 
 void MainWindow::on_actionSave_triggered()
 {
-
+    QString saveJson = QFileDialog::getSaveFileName(this, tr("save as .."), preWorkPath, "json file(*.json);;All file(*.*)");
+    if(saveJson.isEmpty())
+        return;
+    int sz = nlc_vec.size();
+    if(sz<=0)
+        return;
+    for(QVector<nlccollection>::iterator it=nlc_vec.begin(); it!=nlc_vec.end(); it++){
+        if(!(it->checkParameters())){
+            QMessageBox::information(this, tr("error"), tr("请给所有的raw选择ROI"), QMessageBox::Ok);
+            return;
+        }
+    }
+    QJsonArray rawJsObjArr;
+    for(int idx=0; idx<sz; idx++){
+        QJsonObject roi = {{"top", int(nlc_vec[idx].getRoi().top)},
+                           {"bottom", int(nlc_vec[idx].getRoi().bottom)},
+                           {"left", int(nlc_vec[idx].getRoi().left)},
+                           {"right", int(nlc_vec[idx].getRoi().right)}};
+        QJsonObject rawJsObj = {{"name", nlc_vec[idx].getRawName()},
+                                {"ISO", nlc_vec[idx].getISO()},
+                                {"shutter(ms)", nlc_vec[idx].getShut()},
+                                {"roi", QJsonValue(roi)}};
+        rawJsObjArr.append(QJsonValue(rawJsObj));
+    }
+    QJsonDocument rawJsDoc(rawJsObjArr);
+    QFile jsFile(saveJson);
+    if(!(jsFile.open(QIODevice::Text|QIODevice::WriteOnly|QIODevice::Truncate))){
+        QMessageBox::information(this, tr("error"), tr("create %1 fail").arg(saveJson), QMessageBox::Ok);
+        return;
+    }
+    jsFile.write(rawJsDoc.toJson());
+    jsFile.close();
 }
 
 void MainWindow::handleRawInput(const rawinfoDialog& rawinfoDlg, const nlccollection& nl)
