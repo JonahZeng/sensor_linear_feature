@@ -1,4 +1,4 @@
-﻿#if _MSC_VER > 1600
+#if _MSC_VER > 1600
 #pragma execution_character_set("utf-8")  //fuck MSVC complior, use UTF-8, not gb2312/gbk
 #endif
 
@@ -129,6 +129,13 @@ void ImgLabel::paintEvent(QPaintEvent *event)
         p.scale(imgFactor, imgFactor);
 
         p.drawPixmap(0,0, tmpPix);
+        p.restore();
+        p.end();
+    }
+    else{
+        p.begin(this);
+        p.save();
+        p.drawText(event->rect(), Qt::AlignCenter, tr("V300 BLC&NLC TOOL"));
         p.restore();
         p.end();
     }
