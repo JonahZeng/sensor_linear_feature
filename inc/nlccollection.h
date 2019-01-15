@@ -24,12 +24,12 @@ public:
 
     bool checkParameters();
     void calRoiAvgValue();
-    double getAvgR()const{ return avg_r;}
-    double getAvgGr()const{ return avg_gr;}
-    double getAvgGb()const{ return avg_gb;}
-    double getAvgB()const{ return avg_b;}
+    qreal getAvgR()const{ return avg_r;}
+    qreal getAvgGr()const{ return avg_gr;}
+    qreal getAvgGb()const{ return avg_gb;}
+    qreal getAvgB()const{ return avg_b;}
     const QString& getRawName()const {return rawName;}
-    double getShut()const {return shut;}
+    qreal getShut()const {return shut;}
 
     void setRoi(const ROI_t& r) {roi = r;}
     ROI_t getRoi()const {return roi;}
@@ -41,9 +41,9 @@ private:
     rawinfoDialog::bayerMode bm;
     quint16 bitDepth;
     ROI_t roi;
-    double shut;
+    qreal shut;
     int iso;
-    double avg_r, avg_gr, avg_gb, avg_b;
+    qreal avg_r, avg_gr, avg_gb, avg_b;
 
 
     quint8 getBayerCh(quint16 x, quint16 y)const;
