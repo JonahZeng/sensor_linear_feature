@@ -1,4 +1,4 @@
-﻿#if _MSC_VER > 1600
+#if _MSC_VER > 1600
 #pragma execution_character_set("utf-8")  //fuck MSVC complior, use UTF-8, not gb2312/gbk
 #endif
 
@@ -90,6 +90,11 @@ ChartDialog::ChartDialog(QWidget *parent,
     B_pf_2pt->setVisible();
     B_pf_2pt->setName(tr("B_pf s-e"));
 
+    nlc_specific_line = new QLineSeries();
+    nlc_specific_line->append(QPointF(minx-10, (miny+maxy)/2));
+    nlc_specific_line->append(QPointF(maxx+10, (miny+maxy)/2));
+    nlc_specific_line->setPointsVisible(false);
+
     R->append(QList<QPointF>::fromVector(lineR));
     R->setName("R");
     R->setPointsVisible();
@@ -103,8 +108,13 @@ ChartDialog::ChartDialog(QWidget *parent,
     B->setName("B");
     B->setPointsVisible();
 
-    QBrush brush(QColor::fromRgb(255, 0, 0));
-    QPen pen(brush, 2, Qt::SolidLine);
+    QBrush brush(QColor::fromRgb(30, 30, 30));
+    QPen pen(brush, 2, Qt::DashDotLine);
+    nlc_specific_line->setPen(pen);
+
+    brush.setColor(QColor::fromRgb(255, 0, 0));
+    pen.setBrush(brush);
+    pen.setStyle(Qt::SolidLine);
     R->setPen(pen);
 
     brush.setColor(QColor::fromRgb(96, 200, 0));
@@ -151,10 +161,11 @@ ChartDialog::ChartDialog(QWidget *parent,
     //chart->setTitleFont(QFont("Microsoft YaHei UI", 10));
     //chart->setTheme(QChart::ChartThemeBlueCerulean);
     chart->addSeries(R); chart->addSeries(Gr); chart->addSeries(Gb); chart->addSeries(B);
+    chart->addSeries(nlc_specific_line);
     chart->addSeries(R_pf); chart->addSeries(Gr_pf); chart->addSeries(Gb_pf); chart->addSeries(B_pf);
     chart->addSeries(R_pf_2pt); chart->addSeries(Gr_pf_2pt); chart->addSeries(Gb_pf_2pt); chart->addSeries(B_pf_2pt);
 
-    chart->setTitle("<font size='+1'><p align='center'>sensor线性度测试&拟合估计</p></font>");
+    chart->setTitle("<font size='+1'><b><p align='center'>sensor线性度测试&拟合估计</p></b></font>");
     chart->legend()->setVisible(true);
     chart->legend()->setAlignment(Qt::AlignBottom);
     chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
@@ -166,18 +177,20 @@ ChartDialog::ChartDialog(QWidget *parent,
     axisX->setRange(minx-10, maxx+10);
 
     chart->setAxisX(axisX);
+    nlc_specific_line->attachAxis(axisX);
     R->attachAxis(axisX);    Gr->attachAxis(axisX);    Gb->attachAxis(axisX);    B->attachAxis(axisX);
     R_pf->attachAxis(axisX); Gr_pf->attachAxis(axisX); Gb_pf->attachAxis(axisX); B_pf->attachAxis(axisX);
     R_pf_2pt->attachAxis(axisX); Gr_pf_2pt->attachAxis(axisX); Gb_pf_2pt->attachAxis(axisX); B_pf_2pt->attachAxis(axisX);
 
     QValueAxis* axisY = new QValueAxis();
-    axisY->setTitleFont(QFont("Microsoft YaHei UI", 10));
+    //axisY->setTitleFont(QFont("Microsoft YaHei UI", 10));
     axisY->setTitleText(tr("选区平均值(14bit)"));
     axisY->setTickCount(8);
     axisY->setMinorTickCount(3);
     axisY->setRange(miny-10, maxy+10);
 
     chart->setAxisY(axisY);
+    nlc_specific_line->attachAxis(axisY);
     R->attachAxis(axisY); Gr->attachAxis(axisY); Gb->attachAxis(axisY); B->attachAxis(axisY);
     R_pf->attachAxis(axisY); Gr_pf->attachAxis(axisY); Gb_pf->attachAxis(axisY); B_pf->attachAxis(axisY);
     R_pf_2pt->attachAxis(axisY); Gr_pf_2pt->attachAxis(axisY); Gb_pf_2pt->attachAxis(axisY); B_pf_2pt->attachAxis(axisY);
@@ -462,34 +475,54 @@ void ChartDialog::save2XML()
     qSort(Gb_real_y);
     qSort(B_real_y);
 
-    int R_start_idx = polyfitStartR->value();
-    int Gr_start_idx = polyfitStartGr->value();
-    int Gb_start_idx = polyfitStartGb->value();
-    int B_start_idx = polyfitStartB->value();
-    qreal R_start = R_real_y[R_start_idx] - R_ideal_y[0];  //首先减掉理想blc，然后再右移
-    qreal Gr_start = Gr_real_y[Gr_start_idx] - Gr_ideal_y[0];
-    qreal Gb_start = Gb_real_y[Gb_start_idx] - Gb_ideal_y[0];
-    qreal B_start = B_real_y[B_start_idx] - B_ideal_y[0];
+    //int R_start_idx = polyfitStartR->value();//获取4个通道开始拟合的起点的y值，也就是用户认为的小于这个值落在nlc校正区间
+    //int Gr_start_idx = polyfitStartGr->value();
+    //int Gb_start_idx = polyfitStartGb->value();
+    //int B_start_idx = polyfitStartB->value();
+    //qreal R_start = R_real_y[R_start_idx] - R_ideal_y[0];  //首先减掉理想blc，然后再右移
+    //qreal Gr_start = Gr_real_y[Gr_start_idx] - Gr_ideal_y[0];
+    //qreal Gb_start = Gb_real_y[Gb_start_idx] - Gb_ideal_y[0];
+    //qreal B_start = B_real_y[B_start_idx] - B_ideal_y[0];
 
-    qreal max_start = MAX(MAX(MAX(R_start, Gr_start),Gb_start),B_start);
+    //qreal max_start = MAX(MAX(MAX(R_start, Gr_start),Gb_start),B_start);
+    int R_start_idx = 0, Gr_start_idx = 0, Gb_start_idx = 0, B_start_idx = 0;
+    while(R_real_y[R_start_idx] < nlc_specific_line->at(0).y()){
+        R_start_idx++;
+    }
+    while(Gr_real_y[Gr_start_idx] < nlc_specific_line->at(0).y()){
+        Gr_start_idx++;
+    }
+    while(Gb_real_y[Gb_start_idx] < nlc_specific_line->at(0).y()){
+        Gb_start_idx++;
+    }
+    while(B_real_y[B_start_idx] < nlc_specific_line->at(0).y()){
+        B_start_idx++;
+    }
+    qreal min_blc = MIN(MIN(MIN(R_ideal_y[0], Gr_ideal_y[0]), Gb_ideal_y[0]), B_ideal_y[0]);
+    qreal nlc_y_range_top = nlc_specific_line->at(0).y() - min_blc; //用户选定的截止线高度减去blc
 #define BIT_14_MAX 16383
 #define BIT_14_MIN 0
-    Q_ASSERT(max_start>BIT_14_MIN && max_start<BIT_14_MAX);
-    qint16 max_start_d = qint16(max_start+0.5);
+    Q_ASSERT(nlc_y_range_top>BIT_14_MIN && nlc_y_range_top<BIT_14_MAX);
+    qint16 nlc_y_range_top_d = qint16(nlc_y_range_top+0.5);
 #define NLC_POINTS 32
     quint8 right_shift = 0;
-    while((max_start_d>>right_shift)>(NLC_POINTS-1)){
+    while((nlc_y_range_top_d>>right_shift)>(NLC_POINTS-1)){
         ++right_shift;
     }
 
-    RightShiftDialog dlg(this, right_shift);//弹出对话框给用户选择右移几位，显示的初始值是最高精度下的位数
+    RightShiftDialog dlg(this, right_shift);//弹出对话框给用户选择右移几位，显示最少需要右移多少位
     if(RightShiftDialog::Accepted == dlg.exec()){
         right_shift = dlg.getRightShiftBit();
-
-        QVector<qreal> calib_Rx(R_start_idx+1); QVector<qreal> calib_Ry(R_start_idx+1);
+        QDomNode right_shift_node = root.namedItem("nlc_right_shift_bits");
+        if(right_shift_node.isNull()){
+            QMessageBox::critical(this, tr("error"), tr("can not find nlc_right_shift_bits tag in xml"), QMessageBox::Ok);
+            return;
+        }
+        right_shift_node.firstChild().toText().setData(QString::number(right_shift));//设置xml的right shift值
+        QVector<qreal> calib_Rx(R_start_idx+1);   QVector<qreal> calib_Ry(R_start_idx+1);
         QVector<qreal> calib_Grx(Gr_start_idx+1); QVector<qreal> calib_Gry(Gr_start_idx+1);
         QVector<qreal> calib_Gbx(Gb_start_idx+1); QVector<qreal> calib_Gby(Gb_start_idx+1);
-        QVector<qreal> calib_Bx(B_start_idx+1); QVector<qreal> calib_By(B_start_idx+1);
+        QVector<qreal> calib_Bx(B_start_idx+1);   QVector<qreal> calib_By(B_start_idx+1);
 
         for(int n=0; n<R_start_idx+1; n++){
             calib_Rx[n] = R_real_y[n]-R_ideal_y[0];//横轴代表y值本身 纵轴代表y_ideal - y_real
@@ -553,21 +586,21 @@ void ChartDialog::save2XML()
 
         for(quint8 nlc_point=0; nlc_point<NLC_POINTS; nlc_point++){
             quint16 in = nlc_point<<right_shift;
-            parameter_R[nlc_point]  = getParameter(in, calib_Rx, calib_Ry, R_start_idx)*64;
-            parameter_Gr[nlc_point]  = getParameter(in, calib_Grx, calib_Gry, Gr_start_idx)*64;
-            parameter_Gb[nlc_point]  = getParameter(in, calib_Gbx, calib_Gby, Gb_start_idx)*64;
-            parameter_B[nlc_point]  = getParameter(in, calib_Bx, calib_By, B_start_idx+1)*64;
+            qreal tmp = getParameter(in, calib_Rx, calib_Ry, R_start_idx+1) * 4;//nlc lut 放大4倍
+            parameter_R[nlc_point]  = tmp>0 ? qint32(tmp+0.5) : (tmp-0.5);
+            tmp = getParameter(in, calib_Grx, calib_Gry, Gr_start_idx + 1)  *4;
+            parameter_Gr[nlc_point]  = tmp>0 ? qint32(tmp+0.5) : (tmp-0.5);
+            tmp = getParameter(in, calib_Gbx, calib_Gby, Gb_start_idx + 1) * 4;
+            parameter_Gb[nlc_point]  = tmp>0 ? qint32(tmp+0.5) : (tmp-0.5);
+            tmp = getParameter(in, calib_Bx, calib_By, B_start_idx + 1) * 4;
+            parameter_B[nlc_point]  = tmp>0 ? qint32(tmp+0.5) : (tmp-0.5);
         }
         QDomNode data_x = data0_9.at(findIdx);
 
-        QString grid_r_name("blc_grid_r_val");
-        QString grid_gr_name("blc_grid_gr_val");
-        QString grid_gb_name("blc_grid_gb_val");
-        QString grid_b_name("blc_grid_b_val");
-        QDomNode grid_r_node = data_x.namedItem(grid_r_name);
-        QDomNode grid_gr_node = data_x.namedItem(grid_gr_name);
-        QDomNode grid_gb_node = data_x.namedItem(grid_gb_name);
-        QDomNode grid_b_node = data_x.namedItem(grid_b_name);
+        QDomNode grid_r_node = data_x.namedItem("blc_grid_r_val");
+        QDomNode grid_gr_node = data_x.namedItem("blc_grid_gr_val");
+        QDomNode grid_gb_node = data_x.namedItem("blc_grid_gb_val");
+        QDomNode grid_b_node = data_x.namedItem("blc_grid_b_val");
         Q_ASSERT(grid_r_node.isElement() && grid_gr_node.isElement() && grid_gb_node.isElement() && grid_b_node.isElement());
 #define BLC_GRID_ROW 11
 #define BLC_GRID_COL 11
@@ -582,36 +615,40 @@ void ChartDialog::save2XML()
                  && context_list_gb.size()==BLC_GRID_COL*BLC_GRID_ROW \
                  && context_list_b.size()==BLC_GRID_COL*BLC_GRID_ROW);
         for(int k=0; k<BLC_GRID_COL*BLC_GRID_ROW; k++){
-            context_list_r[k] = QString::number(context_list_r[k].toInt() - blc_offset_R);
-            context_list_gr[k] = QString::number(context_list_gr[k].toInt() - blc_offset_Gr);
-            context_list_gb[k] = QString::number(context_list_gb[k].toInt() - blc_offset_Gb);
-            context_list_b[k] = QString::number(context_list_b[k].toInt() - blc_offset_B);
+            if(k%BLC_GRID_ROW==0){
+                context_list_r[k] = QString("\n        ") + QString::number(context_list_r[k].toInt() - blc_offset_R);
+                context_list_gr[k] = QString("\n        ") + QString::number(context_list_gr[k].toInt() - blc_offset_Gr);
+                context_list_gb[k] = QString("\n        ") + QString::number(context_list_gb[k].toInt() - blc_offset_Gb);
+                context_list_b[k] = QString("\n        ") + QString::number(context_list_b[k].toInt() - blc_offset_B);
+            }
+            else{
+                context_list_r[k] = QString::number(context_list_r[k].toInt() - blc_offset_R);
+                context_list_gr[k] = QString::number(context_list_gr[k].toInt() - blc_offset_Gr);
+                context_list_gb[k] = QString::number(context_list_gb[k].toInt() - blc_offset_Gb);
+                context_list_b[k] = QString::number(context_list_b[k].toInt() - blc_offset_B);
+            }
         }
-        tmp = context_list_r.join(", ");
+        tmp = context_list_r.join(", ") + QString("\n        ");
         context_list_r.clear();
         grid_r_node.toElement().firstChild().setNodeValue(tmp);
         tmp.clear();
-        tmp = context_list_gr.join(", ");
+        tmp = context_list_gr.join(", ") + QString("\n        ");
         context_list_gr.clear();
         grid_gr_node.toElement().firstChild().setNodeValue(tmp);
         tmp.clear();
-        tmp = context_list_gb.join(", ");
+        tmp = context_list_gb.join(", ") + QString("\n        ");
         context_list_gb.clear();
         grid_gb_node.toElement().firstChild().setNodeValue(tmp);
         tmp.clear();
-        tmp = context_list_b.join(", ");
+        tmp = context_list_b.join(", ") + QString("\n        ");
         context_list_b.clear();
         grid_b_node.toElement().firstChild().setNodeValue(tmp);
         tmp.clear();
 
-        QString nlc_r_tag_ame("nlc_correction_lut_r");
-        QString nlc_gr_tag_ame("nlc_correction_lut_gr");
-        QString nlc_gb_tag_ame("nlc_correction_lut_gb");
-        QString nlc_b_tag_ame("nlc_correction_lut_b");
-        QDomNode nlc_r_node = data_x.namedItem(nlc_r_tag_ame);
-        QDomNode nlc_gr_node = data_x.namedItem(nlc_gr_tag_ame);
-        QDomNode nlc_gb_node = data_x.namedItem(nlc_gb_tag_ame);
-        QDomNode nlc_b_node = data_x.namedItem(nlc_b_tag_ame);
+        QDomNode nlc_r_node = data_x.namedItem("nlc_correction_lut_r");
+        QDomNode nlc_gr_node = data_x.namedItem("nlc_correction_lut_gr");
+        QDomNode nlc_gb_node = data_x.namedItem("nlc_correction_lut_gb");
+        QDomNode nlc_b_node = data_x.namedItem("nlc_correction_lut_b");
         Q_ASSERT(nlc_r_node.isElement() && nlc_gr_node.isElement() && nlc_gb_node.isElement() && nlc_b_node.isElement());
 
         for(int k=0; k<NLC_POINTS; k++){
@@ -639,14 +676,10 @@ void ChartDialog::save2XML()
         nlc_b_node.toElement().firstChild().setNodeValue(tmp);
         tmp.clear();
 
-        QString cut_r_tag_ame("nlc_cut_r");
-        QString cut_gr_tag_ame("nlc_cut_gr");
-        QString cut_gb_tag_ame("nlc_cut_gb");
-        QString cut_b_tag_ame("nlc_cut_b");
-        QDomNode cut_r_node = data_x.namedItem(cut_r_tag_ame);
-        QDomNode cut_gr_node = data_x.namedItem(cut_gr_tag_ame);
-        QDomNode cut_gb_node = data_x.namedItem(cut_gb_tag_ame);
-        QDomNode cut_b_node = data_x.namedItem(cut_b_tag_ame);
+        QDomNode cut_r_node = data_x.namedItem("nlc_cut_r");
+        QDomNode cut_gr_node = data_x.namedItem("nlc_cut_gr");
+        QDomNode cut_gb_node = data_x.namedItem("nlc_cut_gb");
+        QDomNode cut_b_node = data_x.namedItem("nlc_cut_b");
         Q_ASSERT(cut_r_node.isElement() && cut_gr_node.isElement() && cut_gb_node.isElement() && cut_b_node.isElement());
 
         tmp = QString::number(cut_val_R,10);
@@ -659,8 +692,11 @@ void ChartDialog::save2XML()
         cut_b_node.toElement().firstChild().setNodeValue(tmp);
 
 
-        QFile xml_s("D:/qt_projection/mainwindow/mainwindow/out.xml");
-        xml_s.open(QIODevice::WriteOnly|QIODevice::Text);
+        QFile xml_s(xml_fn);
+        if(!xml_s.open(QIODevice::WriteOnly|QIODevice::Text|QIODevice::Truncate)){
+            QMessageBox::critical(this, tr("error"), tr("open xml fail"), QMessageBox::Ok);
+            return;
+        }
         QTextStream xml_save(&xml_s);
         doc.save(xml_save, 4);//indent 4 space
         xml_s.close();
@@ -918,15 +954,16 @@ void ChartDialog::createUI(int nlc_size)
 
 }
 
-qint16 ChartDialog::getParameter(quint16 in, QVector<qreal>& x, QVector<qreal>& y, int size)
+/*
+ * in: NLC 32 point, every point is in
+ * x : vector<qreal>, pixel value after substract ideal blc
+ * y : real - ideal pixel value vector<qreal>
+ * size:
+*/
+qreal ChartDialog::getParameter(quint16 in, QVector<qreal>& x, QVector<qreal>& y, int size)
 {
     if(in<x[0]){
-        if(y[0]>=0.0){
-            return qint16(y[0]+0.5);
-        }
-        else{
-            return qint16(y[0]-0.5);
-        }
+        return y[0];
     }
     if(in>=x[size-1]){
         return 0;
@@ -941,10 +978,7 @@ qint16 ChartDialog::getParameter(quint16 in, QVector<qreal>& x, QVector<qreal>& 
         ret = (y[i+1]+y[i])/2;
     else
         ret = y[i]+(y[i+1]-y[i])*(in-x[i])/(x[i+1]-x[i]);
-    if(ret>=0)
-        return qint16(ret+0.5);
-    else
-        return qint16(ret-0.5);
+    return ret;
 }
 
 //控制4条曲线及其拟合直线的显示、隐藏
