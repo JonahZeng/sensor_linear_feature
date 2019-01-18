@@ -80,7 +80,7 @@ void calcBlcThread::run()
             raw_f.open(QFile::ReadOnly);
             raw_f.read((char*)raw_buf, bitDepth>8?(2*rawSize.width()*rawSize.height()):rawSize.width()*rawSize.height());
             raw_f.close();
-            addRaw2FourChannel(raw_buf, bayer_r_buf, bayer_gr_buf, bayer_gb_buf, bayer_b_buf);
+            addRaw2FourChannel(raw_buf, bayer_r_buf, bayer_gr_buf, bayer_gb_buf, bayer_b_buf);//split to 4 channel, left shift to 14bit
             memset((void*)raw_buf, 0, bitDepth>8?(2*rawSize.width()*rawSize.height()):rawSize.width()*rawSize.height());
             i++;
             if(i<maxTask)
@@ -114,9 +114,9 @@ void calcBlcThread::run()
         Py_DECREF(p_blur_Gb);
         Py_DECREF(p_blur_B);
 
-        npy_int32 winLen_order1 = zoom_out_R->dimensions[1]/8;
+        npy_int32 winLen_order1 = zoom_out_R->dimensions[1]/4;
         winLen_order1 = (((npy_uint32)winLen_order1>>1)<<1)+1;
-        npy_int32 winLen_order0 = zoom_out_R->dimensions[0]/8;
+        npy_int32 winLen_order0 = zoom_out_R->dimensions[0]/4;
         winLen_order0 = (((npy_uint32)winLen_order0>>1)<<1)+1;
 
         PyArrayObject* savgol_r_order1 = (PyArrayObject*)PyObject_CallFunction(pFuncSavgol, "(Oiiifi)", (PyObject*)zoom_out_R, winLen_order1, 2, 0, 1.0, 1);
@@ -227,44 +227,93 @@ void calcBlcThread::addRaw2FourChannel(quint8 *raw_buf, qreal *r_ch, qreal *gr_c
 {
     qint32 width = rawSize.width();
     qint32 height = rawSize.height();
+    quint16 tmp_r, tmp_gr, tmp_gb, tmp_b;
     switch(bayerMode){
         case rawinfoDialog::RG:
             for(qint32 row=0; row<height; row+=2){
                 for(qint32 col=0; col<width; col+=2){
-                    r_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
-                    gr_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
-                    gb_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col]:raw_buf[(row+1)*width+col];
-                    b_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col+1]:raw_buf[(row+1)*width+col+1];
+                    tmp_r = bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
+                    tmp_gr = bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
+                    tmp_gb = bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col]:raw_buf[(row+1)*width+col];
+                    tmp_b = bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col+1]:raw_buf[(row+1)*width+col+1];
+                    if(bitDepth>=14){
+                        r_ch[row/2*width/2+col/2] += tmp_r>>(bitDepth-14);
+                        gr_ch[row/2*width/2+col/2] += tmp_gr>>(bitDepth-14);
+                        gb_ch[row/2*width/2+col/2] += tmp_gb>>(bitDepth-14);
+                        b_ch[row/2*width/2+col/2] += tmp_b>>(bitDepth-14);
+                    }
+                    else{
+                        r_ch[row/2*width/2+col/2] += tmp_r<<(14-bitDepth);
+                        gr_ch[row/2*width/2+col/2] += tmp_gr<<(14-bitDepth);
+                        gb_ch[row/2*width/2+col/2] += tmp_gb<<(14-bitDepth);
+                        b_ch[row/2*width/2+col/2] += tmp_b<<(14-bitDepth);
+                    }
                 }
             }
             break;
         case rawinfoDialog::GR:
             for(qint32 row=0; row<height; row+=2){
                 for(qint32 col=0; col<width; col+=2){
-                    gr_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
-                    r_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
-                    b_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col]:raw_buf[(row+1)*width+col];
-                    gb_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col+1]:raw_buf[(row+1)*width+col+1];
+                    tmp_gr = bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
+                    tmp_r = bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
+                    tmp_b = bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col]:raw_buf[(row+1)*width+col];
+                    tmp_gb = bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col+1]:raw_buf[(row+1)*width+col+1];
+                    if(bitDepth>=14){
+                        r_ch[row/2*width/2+col/2] += tmp_r>>(bitDepth-14);
+                        gr_ch[row/2*width/2+col/2] += tmp_gr>>(bitDepth-14);
+                        gb_ch[row/2*width/2+col/2] += tmp_gb>>(bitDepth-14);
+                        b_ch[row/2*width/2+col/2] += tmp_b>>(bitDepth-14);
+                    }
+                    else{
+                        r_ch[row/2*width/2+col/2] += tmp_r<<(14-bitDepth);
+                        gr_ch[row/2*width/2+col/2] += tmp_gr<<(14-bitDepth);
+                        gb_ch[row/2*width/2+col/2] += tmp_gb<<(14-bitDepth);
+                        b_ch[row/2*width/2+col/2] += tmp_b<<(14-bitDepth);
+                    }
                 }
             }
             break;
         case rawinfoDialog::GB:
             for(qint32 row=0; row<height; row+=2){
                 for(qint32 col=0; col<width; col+=2){
-                    gb_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
-                    b_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
-                    r_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col]:raw_buf[(row+1)*width+col];
-                    gr_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col+1]:raw_buf[(row+1)*width+col+1];
+                    tmp_gb = bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
+                    tmp_b = bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
+                    tmp_r = bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col]:raw_buf[(row+1)*width+col];
+                    tmp_gr = bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col+1]:raw_buf[(row+1)*width+col+1];
+                    if(bitDepth>=14){
+                        r_ch[row/2*width/2+col/2] += tmp_r>>(bitDepth-14);
+                        gr_ch[row/2*width/2+col/2] += tmp_gr>>(bitDepth-14);
+                        gb_ch[row/2*width/2+col/2] += tmp_gb>>(bitDepth-14);
+                        b_ch[row/2*width/2+col/2] += tmp_b>>(bitDepth-14);
+                    }
+                    else{
+                        r_ch[row/2*width/2+col/2] += tmp_r<<(14-bitDepth);
+                        gr_ch[row/2*width/2+col/2] += tmp_gr<<(14-bitDepth);
+                        gb_ch[row/2*width/2+col/2] += tmp_gb<<(14-bitDepth);
+                        b_ch[row/2*width/2+col/2] += tmp_b<<(14-bitDepth);
+                    }
                 }
             }
             break;
         case rawinfoDialog::BG:
             for(qint32 row=0; row<height; row+=2){
                 for(qint32 col=0; col<width; col+=2){
-                    b_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
-                    gb_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
-                    gr_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col]:raw_buf[(row+1)*width+col];
-                    r_ch[row/2*width/2+col/2] += bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col+1]:raw_buf[(row+1)*width+col+1];
+                    tmp_b = bitDepth>8?((quint16*)raw_buf)[row*width+col]:raw_buf[row*width+col];
+                    tmp_gb = bitDepth>8?((quint16*)raw_buf)[row*width+col+1]:raw_buf[row*width+col+1];
+                    tmp_gr = bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col]:raw_buf[(row+1)*width+col];
+                    tmp_r = bitDepth>8?((quint16*)raw_buf)[(row+1)*width+col+1]:raw_buf[(row+1)*width+col+1];
+                    if(bitDepth>=14){
+                        r_ch[row/2*width/2+col/2] += tmp_r>>(bitDepth-14);
+                        gr_ch[row/2*width/2+col/2] += tmp_gr>>(bitDepth-14);
+                        gb_ch[row/2*width/2+col/2] += tmp_gb>>(bitDepth-14);
+                        b_ch[row/2*width/2+col/2] += tmp_b>>(bitDepth-14);
+                    }
+                    else{
+                        r_ch[row/2*width/2+col/2] += tmp_r<<(14-bitDepth);
+                        gr_ch[row/2*width/2+col/2] += tmp_gr<<(14-bitDepth);
+                        gb_ch[row/2*width/2+col/2] += tmp_gb<<(14-bitDepth);
+                        b_ch[row/2*width/2+col/2] += tmp_b<<(14-bitDepth);
+                    }
                 }
             }
             break;
@@ -452,4 +501,3 @@ void calcBlcThread::createBlcDateNode(quint8 order,
         docRoot.appendChild(data);
     }
 }
-
