@@ -69,6 +69,7 @@ private:
     QScatterSeries *R_pf_2pt, *Gr_pf_2pt, *Gb_pf_2pt, *B_pf_2pt;
     QLineSeries *R, *Gr, *Gb, *B;
     QLineSeries *R_pf, *Gr_pf, *Gb_pf, *B_pf;
+    QLineSeries* nlc_specific_line;
     Chart* chart;
     QHBoxLayout* hlayout;
     QGridLayout* glayout;
@@ -104,7 +105,7 @@ private:
 
     void createUI(int nlc_size);
 
-    qint16 getParameter(quint16 in, QVector<qreal>& x, QVector<qreal>& y, int size);
+    qreal getParameter(quint16 in, QVector<qreal>& x, QVector<qreal>& y, int size);
 };
 
 #endif // CHARTDIALOG_H
