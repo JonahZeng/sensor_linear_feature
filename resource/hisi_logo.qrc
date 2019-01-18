@@ -2,6 +2,7 @@
     <qresource prefix="/">
         <file>hisi_logo.PNG</file>
         <file>about.PNG</file>
-        <file>openraw.PNG</file>
+        <file>BLC_raw.png</file>
+        <file>nlc_raw.png</file>
     </qresource>
 </RCC>
