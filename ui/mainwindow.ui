@@ -107,6 +107,7 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="action_Open_BLC_raw"/>
    <addaction name="actionOpenNLC"/>
    <addaction name="separator"/>
    <addaction name="actionAbout_this_App"/>
@@ -238,7 +239,7 @@
   <action name="actionOpenNLC">
    <property name="icon">
     <iconset resource="../resource/hisi_logo.qrc">
-     <normaloff>:/openraw.PNG</normaloff>:/openraw.PNG</iconset>
+     <normaloff>:/nlc_raw.png</normaloff>:/nlc_raw.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Open NLC raw</string>
@@ -282,6 +283,10 @@
    </property>
   </action>
   <action name="action_Open_BLC_raw">
+   <property name="icon">
+    <iconset resource="../resource/hisi_logo.qrc">
+     <normaloff>:/BLC_raw.png</normaloff>:/BLC_raw.png</iconset>
+   </property>
    <property name="text">
     <string>&amp;Open BLC raw</string>
    </property>
