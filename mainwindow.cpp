@@ -11,6 +11,7 @@
 #include "ui_mainwindow.h"
 #include "Python.h"
 #include <QImage>
+#include <QtMath>
 #include <QtAlgorithms>
 #include <QApplication>
 #include <QFileDialog>
@@ -227,11 +228,11 @@ void MainWindow::on_actionAbout_this_App_triggered()
 
 void MainWindow::on_actionOpenNLC_triggered()
 {
-    QFileDialog openRawDlg(this, tr("open file"), preWorkPath, "raw file(*.raw);;All file(*.*)");
-    openRawDlg.setFileMode(QFileDialog::ExistingFiles);
-    QStringList fileNames;
-    if(openRawDlg.exec())
-       fileNames = openRawDlg.selectedFiles();
+    //QFileDialog openRawDlg(this, tr("open file"), preWorkPath, "raw file(*.raw);;All file(*.*)");
+    //openRawDlg.setFileMode(QFileDialog::ExistingFiles);
+    QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("open file"), preWorkPath, "raw file(*.raw);;All file(*.*)");
+    //if(openRawDlg.exec())
+    //   fileNames = openRawDlg.selectedFiles();
     QStringList rawNames;
     for(QStringList::iterator it = fileNames.begin(); it != fileNames.end(); it++){
         if(it->endsWith(".raw") || it->endsWith(".RAW")){
@@ -269,7 +270,15 @@ void MainWindow::on_actionOpenNLC_triggered()
 
     if(rawinfoDlg == NULL)
         rawinfoDlg = new rawinfoDialog(this);
-
+    QFileInfo firstRawFileInfo(rawNames[0]);
+    qint64 raw_sz = firstRawFileInfo.size();
+    if(raw_sz%24==0){//default scale 4:3
+         qreal unit_len = qSqrt(raw_sz/24);
+         if(unit_len-qint64(unit_len) == 0.0){
+             rawinfoDlg->setRawWidth(4*quint16(unit_len));
+             rawinfoDlg->setRawHeight(3*quint16(unit_len));
+         }
+    }
     if(rawinfoDlg->exec() == rawinfoDialog::Accepted)
     {
         nlc_vec.clear();//清除上一次的数据
@@ -522,9 +531,17 @@ void MainWindow::on_action_Open_BLC_raw_triggered()
     if(blc_raws.size()==0)
         return;
     ui->statusBar->showMessage(tr("open %1 raw").arg(blc_raws.size()), 2000);
-    QFileInfo workPathInfo(blc_raws[0]);
-    preWorkPath = workPathInfo.absolutePath();//记录打开的目录，下一次open file直接定位到这个目录下
+    QFileInfo firstRawFileInfo(blc_raws[0]);
+    preWorkPath = firstRawFileInfo.absolutePath();//记录打开的目录，下一次open file直接定位到这个目录下
     rawinfoDialog dlg;
+    qint64 raw_sz = firstRawFileInfo.size();
+    if(raw_sz%24==0){//default scale 4:3
+         qreal unit_len = qSqrt(raw_sz/24);
+         if(unit_len-qint64(unit_len) == 0.0){
+             dlg.setRawWidth(4*quint16(unit_len));
+             dlg.setRawHeight(3*quint16(unit_len));
+         }
+    }
     QMap<qint32, QStringList> blc_fn_map;
     if(rawinfoDialog::Accepted == dlg.exec()){
         rawinfoDialog::bayerMode bm = dlg.getBayer();
