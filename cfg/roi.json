@@ -1,0 +1,266 @@
+[
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173652325406_FID_006bc03861442413595301300_EI_000020s_256_ISO_50_WBOTP_c038_6144_2413_LV_85_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 50
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173650206741_FID_006bc03861442413595301300_EI_000030s_256_ISO_50_WBOTP_c038_6144_2413_LV_85_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 33.333333333333336
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173648275216_FID_006bc03861442413595301300_EI_000040s_256_ISO_50_WBOTP_c038_6144_2413_LV_85_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 25
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173646204250_FID_006bc03861442413595301300_EI_000050s_256_ISO_50_WBOTP_c038_6144_2413_LV_85_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 20
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173644157482_FID_006bc03861442413595301300_EI_000060s_256_ISO_50_WBOTP_c038_6144_2413_LV_85_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 16.666666666666668
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173641637376_FID_006bc03861442413595301300_EI_000080s_256_ISO_50_WBOTP_c038_6144_2413_LV_85_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 12.5
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173639187346_FID_006bc03861442413595301300_EI_000100s_256_ISO_50_WBOTP_c038_6144_2413_LV_85_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 10
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173637165835_FID_006bc03861442413595301300_EI_000125s_256_ISO_50_WBOTP_c038_6144_2413_LV_85_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 8
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173634733605_FID_006bc03861442413595301300_EI_000160s_256_ISO_50_WBOTP_c038_6144_2413_LV_85_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 6.25
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173632295492_FID_006bc03861442413595301300_EI_000200s_256_ISO_50_WBOTP_c038_6144_2413_LV_85_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 5
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173630551363_FID_006bc03861442413595301300_EI_000250s_256_ISO_50_WBOTP_c038_6144_2413_LV_84_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 4
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173627986641_FID_006bc03861442413595301300_EI_000320s_256_ISO_50_WBOTP_c038_6144_2413_LV_81_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 3.125
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173625840533_FID_006bc03861442413595301300_EI_000400s_256_ISO_50_WBOTP_c038_6144_2413_LV_80_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 2.5
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173623817069_FID_006bc03861442413595301300_EI_000500s_256_ISO_50_WBOTP_c038_6144_2413_LV_84_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 2
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173619390490_FID_006bc03861442413595301300_EI_000640s_256_ISO_50_WBOTP_c038_6144_2413_LV_81_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 1.5625
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173617306640_FID_006bc03861442413595301300_EI_000800s_256_ISO_50_WBOTP_c038_6144_2413_LV_75_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 1.25
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173615244409_FID_006bc03861442413595301300_EI_001000s_256_ISO_50_WBOTP_c038_6144_2413_LV_78_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 1
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173613099398_FID_006bc03861442413595301300_EI_001250s_256_ISO_50_WBOTP_c038_6144_2413_LV_81_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 0.8
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173610810978_FID_006bc03861442413595301300_EI_001600s_256_ISO_50_WBOTP_c038_6144_2413_LV_85_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 0.625
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173608607484_FID_006bc03861442413595301300_EI_002000s_256_ISO_50_WBOTP_c038_6144_2413_LV_88_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 0.5
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173605781429_FID_006bc03861442413595301300_EI_002500s_256_ISO_50_WBOTP_c038_6144_2413_LV_91_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 0.4
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173603502647_FID_006bc03861442413595301300_EI_003205s_256_ISO_50_WBOTP_c038_6144_2413_LV_95_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 0.31201248049922
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173559965036_FID_006bc03861442413595301300_EI_004000s_256_ISO_50_WBOTP_c038_6144_2413_LV_98_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 0.25
+    },
+    {
+        "ISO": 50,
+        "name": "E:/yqzeng/beijing_20180613/mate10_algo3_D65/d65_raw/IMX386DUALHYBIRD_SU20180810_173559965036_FID_006bc03861442413595301300_EI_000000s_256_ISO_50_WBOTP_c038_6144_2413_LV_98_id_0.raw",
+        "roi": {
+            "bottom": 1720,
+            "left": 2272,
+            "right": 2314,
+            "top": 1610
+        },
+        "shutter(ms)": 0
+    }
+]
