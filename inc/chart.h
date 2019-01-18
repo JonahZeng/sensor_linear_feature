@@ -13,11 +13,13 @@ public:
         Gr_PRESSED = 1,
         Gb_PRESSED = 2,
         B_PRESSED = 3,
+        NLC_SPECIFIC_LINE_PRESSED = 4,
         UN_PRESSED = -1
     };
     Chart();
     ~Chart();
     qint16 getSeriseNum();
+    void setPressedSeriseNum(qint16 idx);
     quint32 getSeletedIdx() const {return seleted_idx;}
 
 public slots:
@@ -32,7 +34,7 @@ public slots:
     void reciveB_released(const QPointF& pt);
 
 private:
-    bool r_flag, gr_flag, gb_flag, b_flag;
+    bool r_flag, gr_flag, gb_flag, b_flag, nlc_specific_line_flag;
     quint32 seleted_idx;
 };
 
