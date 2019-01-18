@@ -1,4 +1,4 @@
-﻿#include "inc\rawinfodialog.h"
+#include "inc\rawinfodialog.h"
 #include "ui_rawinfodialog.h"
 #include <QIntValidator>
 
@@ -23,6 +23,16 @@ rawinfoDialog::rawinfoDialog(QWidget *parent) :
 rawinfoDialog::~rawinfoDialog()
 {
     delete ui;
+}
+
+void rawinfoDialog::setRawWidth(quint16 width)
+{
+    ui->widthInput->setText(QString::number(width));
+}
+
+void rawinfoDialog::setRawHeight(quint16 height)
+{
+    ui->heightInput->setText(QString::number(height));
 }
 
 void rawinfoDialog::on_OkBtn_clicked()
