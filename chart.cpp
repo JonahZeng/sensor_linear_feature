@@ -1,4 +1,4 @@
-﻿#if _MSC_VER > 1600
+#if _MSC_VER > 1600
 #pragma execution_character_set("utf-8")  //fuck MSVC complior, use UTF-8, not gb2312/gbk
 #endif
 
@@ -14,6 +14,7 @@ Chart::Chart():
     gr_flag(false),
     gb_flag(false),
     b_flag(false),
+    nlc_specific_line_flag(false),
     seleted_idx(0)
 {
 
@@ -34,8 +35,32 @@ qint16 Chart::getSeriseNum()
         return Gb_PRESSED;
     else if(b_flag)
         return B_PRESSED;
+    else if(nlc_specific_line_flag)
+        return NLC_SPECIFIC_LINE_PRESSED;
     else
         return UN_PRESSED;
+}
+
+void Chart::setPressedSeriseNum(qint16 idx)
+{
+    if(idx == R_PRESSED){
+        r_flag = true;
+    }
+    else if(idx == Gr_PRESSED){
+        gr_flag = true;
+    }
+    else if(idx == Gb_PRESSED){
+        gb_flag = true;
+    }
+    else if(idx == B_PRESSED){
+        b_flag = true;
+    }
+    else if(idx == NLC_SPECIFIC_LINE_PRESSED){
+        nlc_specific_line_flag = true;
+    }
+    else{
+        r_flag = gr_flag = gb_flag = b_flag = nlc_specific_line_flag = false;
+    }
 }
 
 
