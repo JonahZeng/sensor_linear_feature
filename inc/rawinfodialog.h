@@ -1,4 +1,4 @@
-﻿#ifndef RAWINFODIALOG_H
+#ifndef RAWINFODIALOG_H
 #define RAWINFODIALOG_H
 
 #include <QDialog>
@@ -21,14 +21,7 @@ public:
         BG = 3,
         NO_BAYER = -1
     };
-    /*enum inputStat{
-        CANCEL = false,
-        OK = true
-    };*/
 
-    //inline inputStat getInputFlag()const{
-    //  return inputFlag;
-    //}
     inline bayerMode getBayer()const{
         return bayer;
     }
@@ -38,6 +31,8 @@ public:
     inline unsigned short getBitDepth()const{
         return bitDepth;
     }
+    void setRawWidth(quint16 width);
+    void setRawHeight(quint16 height);
 
 private slots:
     void on_OkBtn_clicked();
