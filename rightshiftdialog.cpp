@@ -1,7 +1,7 @@
-﻿#if _MSC_VER > 1600
+#if _MSC_VER > 1600
 #pragma execution_character_set("utf-8")  //fuck MSVC complior, use UTF-8, not gb2312/gbk
 #endif
-#include "inc\rightshiftdialog.h"
+#include "inc/rightshiftdialog.h"
 #include "ui_rightshiftdialog.h"
 
 RightShiftDialog::RightShiftDialog(QWidget *parent, quint8 right_shift_bit) :
