@@ -1,4 +1,4 @@
-﻿#if _MSC_VER > 1600
+#if _MSC_VER > 1600
 #pragma execution_character_set("utf-8")  //fuck MSVC complior, use UTF-8, not gb2312/gbk
 #endif
 
@@ -113,6 +113,10 @@ BLCDialog::BLCDialog(QWidget *parent, const QMap<qint32, QStringList>& blc_map, 
     xmlDoc->appendChild(insturction);
     docRoot = xmlDoc->createElement("module_calibration");
     xmlDoc->appendChild(docRoot);
+    QDomElement nlc_right_shift_node = xmlDoc->createElement("nlc_right_shift_bits");//add right shift tag
+    QDomText nlc_right_shift_text = xmlDoc->createTextNode("0");
+    nlc_right_shift_node.appendChild(nlc_right_shift_text);
+    docRoot.appendChild(nlc_right_shift_node);
 
     qint32 curSeletISO = blc_fn_map.firstKey();
     QString curRawFn = blc_fn_map[curSeletISO].at(0);
@@ -656,6 +660,7 @@ void BLCDialog::onSurface_gr_Toggled(bool statu)
     if(statu){
         if(deepCopyDataArray(showOnScreenDataArr, aeGain_surfaceData_4p_map, this->iso, SELECT_GR)){//内部判断哪个bayer channel被选中
             threeDSurface->seriesList().at(0)->dataProxy()->resetArray(showOnScreenDataArr);
+            threeDSurface->axisY()->setAutoAdjustRange(true);
             yMaxSpinBox->setValue(threeDSurface->axisY()->max());
             yMinSpinBox->setValue(threeDSurface->axisY()->min());
         }
@@ -667,6 +672,7 @@ void BLCDialog::onSurface_gb_Toggled(bool statu)
     if(statu){
         if(deepCopyDataArray(showOnScreenDataArr, aeGain_surfaceData_4p_map, this->iso, SELECT_GB)){//内部判断哪个bayer channel被选中
             threeDSurface->seriesList().at(0)->dataProxy()->resetArray(showOnScreenDataArr);
+            threeDSurface->axisY()->setAutoAdjustRange(true);
             yMaxSpinBox->setValue(threeDSurface->axisY()->max());
             yMinSpinBox->setValue(threeDSurface->axisY()->min());
         }
@@ -678,6 +684,7 @@ void BLCDialog::onSurface_b_Toggled(bool statu)
     if(statu){
         if(deepCopyDataArray(showOnScreenDataArr, aeGain_surfaceData_4p_map, this->iso, SELECT_B)){//内部判断哪个bayer channel被选中
             threeDSurface->seriesList().at(0)->dataProxy()->resetArray(showOnScreenDataArr);
+            threeDSurface->axisY()->setAutoAdjustRange(true);
             yMaxSpinBox->setValue(threeDSurface->axisY()->max());
             yMinSpinBox->setValue(threeDSurface->axisY()->min());
         }
@@ -871,3 +878,4 @@ void BlcSpinBox::stepBy(int steps)//reimplement stepBy, 用于在setValue之前�
     }
     QAbstractSpinBox::stepBy(steps);
 }
+
