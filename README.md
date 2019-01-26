@@ -28,7 +28,7 @@ edit菜单用于控制图片显示缩放；
 使用菜单打开文件对话框，选择blc raw
 
 ![open_blc_raw](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/blc_menu.png?raw=true)
-![select_blc_raw](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/select_blc_raw.png?raw=true)
+![select_blc_raw](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/blc_menu.png?raw=true)
 ### step 2
 工具侦测到选择的是raw文件，弹出对话框，如果是4:3的16bit raw，这里会自动计算出长宽，只需要输入bit位宽和bayer模式；如果不是这种类型的raw，则输入raw长宽和bit位宽，bayer模式，点击ok
 
@@ -40,7 +40,7 @@ edit菜单用于控制图片显示缩放；
 
 计算完成以后，最终的结果显示：
 
-![blc_dlg](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/blc_dlg.png?raw=true)
+![blc_dlg](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/blc_dlg.jpg?raw=true)
 
 点击“保存xml”按钮把结果保存到xml即可，如果要继续进行NLC标定，这个xml请保留给NLC标定导入；
 
@@ -57,20 +57,20 @@ edit菜单用于控制图片显示缩放；
 ### step 2
 为所有的raw选择选区：
 
-![set_nlc_roi](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/nlc_roi_set.png?raw=true)
+![set_nlc_roi](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/nlc_roi_set.jpg?raw=true)
 
-![sync_roi](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/sync_roipng.png?raw=true)
+![sync_roi](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/sync_roipng.jpg?raw=true)
 
 **note**:界面上显示的图像是经过downscale 1/4的，右侧的roi坐标恢复到原始raw坐标
 
 ### step 3
 nlc对话框操作：
 
-![nlc_dlg_1](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/nlc_dlg_1.png?raw=true)
+![nlc_dlg_1](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/nlc_dlg_1.jpg?raw=true)
 
-![nlc_dlg_2](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/nlc_dlg_2.png?raw=true)
+![nlc_dlg_2](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/nlc_dlg_2.jpg?raw=true)
 
-![nlc_dle_3](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/nlc_dlg_3.png?raw=true)
+![nlc_dle_3](https://github.com/JonahZeng/sensor_linear_feature/blob/master/image/nlc_dlg_3.jpg?raw=true)
 
 
 ## 彩蛋
