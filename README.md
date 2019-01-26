@@ -1,4 +1,4 @@
-# V300 BLC&NLC calibration tool user guide
+BLC&NLC calibration tool user guide
 ------------------------------------------
 ## 总览
 1. 原则：尽可能的提供多的功能，同时尽可能减少交互操作，数据存储前提供给用户肉眼检查确认；
